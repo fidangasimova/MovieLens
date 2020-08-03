@@ -1,0 +1,43 @@
+---
+title: "Report"
+author: "FH"
+date: "August 3, 2020"
+output: html_document
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Inroduction
+
+
+```{r cars}
+summary(cars)
+```
+
+## Overview
+
+Variable names, summary
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+
+##Method Section
+
+Explain the method and techniques used, Visualization with insights, data exploration. Use at least two Methods 
+You will use the following code to generate your datasets. Develop your algorithm using the edx set. For a final test of your algorithm, predict movie ratings in the validation set (the final hold-out test set) as if they were unknown. RMSE will be used to evaluate how close your predictions are to the true values in the validation set (the final hold-out test set).
+
+##Results Section
+
+Resultes presented and discussed.Model performance. 
+
+
+##Conclusion Section
+
+Brief summary of the report. It's limitation and future work.
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
