@@ -1,5 +1,6 @@
-##############################
-# FINAL PROJECT 
+#######################
+# PROJECT MovieLens
+######################
 library(dslabs)
 library(tidyverse)
 library(caret)
@@ -11,6 +12,10 @@ library(dplyr)
 
 
 data("movielens")
+
+# Description of data set
+str(movielens)
+summary(movielens)
 
 
 ################################
@@ -104,4 +109,22 @@ edx %>% group_by(movieId, title) %>%
 
 edx%>%group_by(rating)%>%summarize(count = n()) %>%
   arrange(desc(count))
+
+###########################################################################
+
+
+
+# Define the outcome and predictors
+
+#Outcome
+y<-edx$ratings
+
+#Predictors
+x<-edx$
+  
+# Generate training and test sets
+set.seed(2007)
+test_index <- createDataPartition(y, times = 1, p = 0.5, list = FALSE)
+test_set <- edx[test_index, ]
+train_set <- edx[-test_index, ]  
 

@@ -1,9 +1,9 @@
 ---
-title: "Report"
+title: "Report: MovieLens Project"
 author: "FH"
 date: "August 3, 2020"
 output: html_document
-output: pdf_document
+--output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -13,13 +13,23 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Inroduction
 
 
-```{r cars}
-summary(cars)
-```
+
 
 ## Overview
 
-Variable names, summary
+The data set "movielens" contains 100004 observations of 7 variables. List of variables:
+"movieId" is a numerical variable denotes id's for each movie starts with 1 to 163949, 
+"title" is a string varible describing the title of a movie,
+"year" mumerical variable with the year of movie release from 1902 to 2016, 
+"genres" is a categorical variable with ,
+
+userId,
+rating,
+timestamp
+
+
+
+
 
 ```{r pressure, echo=FALSE}
 plot(pressure)
