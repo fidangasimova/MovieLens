@@ -65,6 +65,11 @@ edx <- rbind(edx, removed)
 rm(dl, ratings, movies, test_index, temp, movielens, removed)
 
 #############################################################
+# Data exploration
+edx%>%as_tibble()
+
+head(edx,10)
+str(edx$rating)
 ncol(edx)
 nrow(edx)
 
@@ -76,7 +81,8 @@ edx %>% filter(rating == 0) %>% tally()
 sum(edx$rating==3)
 edx %>% filter(rating == 3) %>% tally()
 
-#How many different movies are in the edx dataset?How many different users are in the edx dataset?
+#How many different movies are in the edx dataset?
+#How many different users are in the edx dataset?
 edx %>%
   summarize(n_users = n_distinct(userId),
             n_movies = n_distinct(movieId))
@@ -95,9 +101,7 @@ edx %>% separate_rows(genres, sep = "\\|") %>%
   summarize(count = n()) %>%
   arrange(desc(count))
 
-
-
-###Which movie has the greatest number of ratings?
+### Which movie has the greatest number of ratings?
 edx%>%group_by(movieId)%>%mutate(count=n())%>%top_n(5)%>%arrange(desc(count()))
 #or
 edx %>% group_by(movieId, title) %>%
@@ -105,15 +109,27 @@ edx %>% group_by(movieId, title) %>%
   arrange(desc(count))
 
 
-###What are the five most given ratings in order from most to least?
+### What are the five most given ratings in order from most to least?
 
 edx%>%group_by(rating)%>%summarize(count = n()) %>%
   arrange(desc(count))
 
+summary(edx$timestamp)
+
+####################################
+#Visualization
+library(ggplot2)
+genreCountPlot <- edx%>%ggplot(aes(x = reorder(genres, genres, function(x) -length(x)))) + 
+  geom_bar()
+genreCountPlot <- genreCountPlot + theme(axis.text.x = element_text(angle = 90, 
+                                                                    hjust = 1))
+genreCountPlot <- genreCountPlot + ylab("number of movies") + xlab("genre")
+genreCountPlot <- genreCountPlot + coord_flip()
+print(genreCountPlot)
+
+p1<-edx%>%ggplot(aes(x=rating, y=..count.., color=genres))+geom_histogram()
+
 ###########################################################################
-
-
-
 # Define the outcome and predictors
 
 #Outcome
