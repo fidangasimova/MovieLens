@@ -5,18 +5,13 @@ library(dslabs)
 library(tidyverse)
 library(caret)
 library(dplyr)
-
+library(lubridate)
 #IMPORTANT: Make sure you do NOT use the validation set (the final hold-out test set) to train your algorithm. 
 #The validation set (the final hold-out test set) should ONLY be used to test your final algorithm. 
 #You should split the edx data into a training and test set or use cross-validation.
 
 
 data("movielens")
-
-# Description of data set
-str(movielens)
-summary(movielens)
-
 
 ################################
 # Create edx set, validation set
@@ -46,7 +41,9 @@ movies <- as.data.frame(movies, stringsAsFactors=TRUE) %>% mutate(movieId = as.n
 
 movielens <- left_join(ratings, movies, by = "movieId")
 
-# Validation set will be 10% of MovieLens data
+#################################################
+# Validation set will be 10% of MovieLens data  #
+
 set.seed(1, sample.kind="Rounding")
 # if using R 3.5 or earlier, use `set.seed(1)` instead
 test_index <- createDataPartition(y = movielens$rating, times = 1, p = 0.1, list = FALSE)
@@ -57,6 +54,8 @@ temp <- movielens[test_index,]
 validation <- temp %>% 
   semi_join(edx, by = "movieId") %>%
   semi_join(edx, by = "userId")
+#####################################################
+
 
 # Add rows removed from validation set back into edx set
 removed <- anti_join(temp, validation)
@@ -64,10 +63,34 @@ edx <- rbind(edx, removed)
 
 rm(dl, ratings, movies, test_index, temp, movielens, removed)
 
-#############################################################
-# Data exploration
-edx%>%as_tibble()
+# REMOVE ME LATER
+edx <- edx[1:100,]
 
+#############################################################
+#           Data cleaning                              ##
+
+#Sort data by movieId 
+edx<-arrange(edx, by=movieId)
+
+
+# Split title and year into separate columns. Convert year character into to integer
+edx<-edx%>%mutate(release_year = str_extract(title, "\\(\\d{4}\\)$") %>%str_remove_all("[\\(\\)]")%>%as.numeric(),
+            title = str_remove(title, "\\(\\d{4}\\)$") %>% str_trim())
+
+class(edx$release_year)
+str(edx)
+
+#Split genres into single columns per genre
+edx<-edx %>% separate_rows(genres, sep = "\\|")
+
+#Modify the rating timestamp: from universal seconds to datetime year
+
+#Check missing values
+sum(is.na(edx))
+
+edx%>%as_tibble()
+str(edx)
+summary(edx)
 head(edx,10)
 str(edx$rating)
 ncol(edx)
@@ -114,8 +137,16 @@ edx %>% group_by(movieId, title) %>%
 edx%>%group_by(rating)%>%summarize(count = n()) %>%
   arrange(desc(count))
 
-summary(edx$timestamp)
+#Transform timestamp varibale into data format
+edx%>%mutate(year_timestamp)
 
+#Number of movies in different genres
+edx %>% separate_rows(genres, sep = "\\|")%>%group_by(genres) %>%
+  summarize(count = n()) 
+
+# Number of different genres
+edx %>% separate_rows(genres, sep = "\\|")%>%summarize(genre = n_distinct(genres))
+                                                                
 ####################################
 #Visualization
 library(ggplot2)
@@ -136,11 +167,19 @@ p1<-edx%>%ggplot(aes(x=rating, y=..count.., color=genres))+geom_histogram()
 y<-edx$ratings
 
 #Predictors
-x<-edx$
+x<-edx
   
 # Generate training and test sets
-set.seed(2007)
-test_index <- createDataPartition(y, times = 1, p = 0.5, list = FALSE)
+set.seed(20)
+test_index <- createDataPartition(y=edx$ratings, times = 1, p = 0.5, list = FALSE)
 test_set <- edx[test_index, ]
 train_set <- edx[-test_index, ]  
+
+#To make sure we don’t include users and movies in the test set that do not appear in the training set, 
+#we remove these entries using the semi_join function:
+  
+  test_set <- test_set %>% 
+  semi_join(train_set, by = "movieId") %>%
+  semi_join(train_set, by = "userId")
+
 

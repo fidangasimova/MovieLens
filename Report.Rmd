@@ -18,7 +18,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Overview
 
 The data set "movielens" is proccesed into a validation data set and the "edx" data. The "edx" data set will be split into a training set and the test set. The "validation" data set will be only used to test the final algorithm. 
-The "edx" data set that contains 9,000,055 observations and 6 variables represented in 6 total columns. Each row represents one user giving one rating to one specific movie. Intotal no zero ratings were given. There are 69878 unique users and 10677 movies in the edx data set.
+The "edx" data set that contains 9,000,055 observations and 6 variables represented in 6 total columns. Each row represents one user giving one rating to one specific movie. In total no zero ratings were given. There are 69878 unique users and 10677 movies in the edx data set.
 
 
 Distribution of ratings
@@ -36,13 +36,13 @@ The data consists of following variables:
 
 -*"year"* mumerical variable with the year of movie release from 1902 to 2016.
 
--*"genres"* is a categorical variable with 
+-*"genres"* is a categorical variable that represent 17 different genres 
 
 -*"userId"* a numerical variable to idenfy unique users.
 
 -*"rating"* a numerical variable from 0 to 5.
 
--*"timestamp"* 
+-*"timestamp"* is represented in seconds since the epoch as returned by time(2)
 
 Descriptive statistics
 Is there any outliers? 
@@ -58,6 +58,19 @@ plot(pressure)
 
 
 ## Method Section
+
+Sort by movieId 
+
+Split title and year into separate columns. Convert year to datetime.
+
+Split genre strings into separate columns per genre.
+
+Tranform the rating timestamp: from universal seconds to datetime year
+
+Clean missing values if % of NaN values is small delete
+
+
+
 Develop your algorithm using the edx set. For a final test of your algorithm, predict movie ratings in the validation set (the final hold-out test set) as if they were unknown. RMSE will be used to evaluate how close your predictions are to the true values in the validation set (the final hold-out test set).
 
 Important: The validation data (the final hold-out test set) should NOT be used for training your algorithm and should ONLY be used for evaluating the RMSE of your final algorithm. You should split the edx data into separate training and test sets to design and test your algorithm.
