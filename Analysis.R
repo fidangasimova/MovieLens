@@ -43,6 +43,7 @@ movielens <- left_join(ratings, movies, by = "movieId")
 
 #################################################
 # Validation set will be 10% of MovieLens data  #
+#################################################
 
 set.seed(1, sample.kind="Rounding")
 # if using R 3.5 or earlier, use `set.seed(1)` instead
@@ -56,7 +57,6 @@ validation <- temp %>%
   semi_join(edx, by = "userId")
 #####################################################
 
-
 # Add rows removed from validation set back into edx set
 removed <- anti_join(temp, validation)
 edx <- rbind(edx, removed)
@@ -67,101 +67,101 @@ rm(dl, ratings, movies, test_index, temp, movielens, removed)
 edx <- edx[1:100,]
 
 #############################################################
-#           Data cleaning                              ##
+#           Data cleaning and exporation                  ##
+#############################################################
+
+# edx summary
+summary(edx)
+str(edx)
+#Number of variables
+ncol(edx)
+#Number of observarions
+nrow(edx)
 
 #Sort data by movieId 
 edx<-arrange(edx, by=movieId)
 
+# Split title and year into separate columns
+edx<-extract(edx, title, c("title", "release_year"), "(.*)\\((\\d{4})\\)$")
 
-# Split title and year into separate columns. Convert year character into to integer
-edx<-edx%>%mutate(release_year = str_extract(title, "\\(\\d{4}\\)$") %>%str_remove_all("[\\(\\)]")%>%as.numeric(),
-            title = str_remove(title, "\\(\\d{4}\\)$") %>% str_trim())
-
-class(edx$release_year)
-str(edx)
+# Convert year character into to an integer
+edx<-transform(edx, release_year = as.numeric(release_year))
 
 #Split genres into single columns per genre
 edx<-edx %>% separate_rows(genres, sep = "\\|")
 
-#Modify the rating timestamp: from universal seconds to datetime year
-
+#Transform the rating timestamp to datetime year
+edx<-transform(edx, rating_time = round_date(as_datetime(timestamp), unit="month"))
+  
 #Check missing values
 sum(is.na(edx))
 
-edx%>%as_tibble()
-str(edx)
-summary(edx)
 head(edx,10)
-str(edx$rating)
-ncol(edx)
-nrow(edx)
 
 #How many zeros were given as ratings in the edx dataset?
 sum(edx$rating==0)
 edx %>% filter(rating == 0) %>% tally()
 
-#How many threes were given as ratings in the edx dataset?
-sum(edx$rating==3)
-edx %>% filter(rating == 3) %>% tally()
-
-#How many different movies are in the edx dataset?
-#How many different users are in the edx dataset?
+#How many different users and movies are in the edx dataset?
 edx %>%
   summarize(n_users = n_distinct(userId),
             n_movies = n_distinct(movieId))
-n_distinct(edx$movieId)
 
-###How many movie ratings are in each of the following genres in the edx dataset?
-# str_detect
-genres = c("Drama", "Comedy", "Thriller", "Romance")
-sapply(genres, function(g) {
-  sum(str_detect(edx$genres, g))
-})
+#Number of movies in different genres
+edx%>%group_by(genres) %>%
+  summarize(count = n()) 
+edx
 
-# separate_rows, much slower!
-edx %>% separate_rows(genres, sep = "\\|") %>%
-  group_by(genres) %>%
+# Number of different genres
+edx%>%summarize(genre = n_distinct(genres))
+edx
+
+#How many movie ratings are in each of the following genres in the edx dataset?
+edx %>% group_by(genres) %>%e
   summarize(count = n()) %>%
   arrange(desc(count))
+edx
 
-### Which movie has the greatest number of ratings?
+# Top 10 of movies with greatest number of ratings?
 edx%>%group_by(movieId)%>%mutate(count=n())%>%top_n(5)%>%arrange(desc(count()))
 #or
+
 edx %>% group_by(movieId, title) %>%
   summarize(count = n()) %>%
   arrange(desc(count))
 
 
-### What are the five most given ratings in order from most to least?
-
+### What are the top 10 most given ratings in order from most to least?
 edx%>%group_by(rating)%>%summarize(count = n()) %>%
-  arrange(desc(count))
+arrange(desc(count))
+edx
 
-#Transform timestamp varibale into data format
-edx%>%mutate(year_timestamp)
-
-#Number of movies in different genres
-edx %>% separate_rows(genres, sep = "\\|")%>%group_by(genres) %>%
-  summarize(count = n()) 
-
-# Number of different genres
-edx %>% separate_rows(genres, sep = "\\|")%>%summarize(genre = n_distinct(genres))
-                                                                
 ####################################
-#Visualization
+#   Visualization
+####################################
 library(ggplot2)
-genreCountPlot <- edx%>%ggplot(aes(x = reorder(genres, genres, function(x) -length(x)))) + 
-  geom_bar()
+
+# Distribution of ratings
+edx%>%summarize(average=mean(rating), sd=sd(rating))%>%ggplot(aes(x=release_year, ))
+
+
+genreCountPlot <- edx%>%ggplot(aes(x = reorder(genres,genres))) + 
+  geom_bar()+labs(x="Genre", y="Number of movies")+
+  geom_text(aes(label=count), hjust=0.1, size=4)
+  
+edx%>%ggplot(x, aes(reorder(genres, rating, median, order=TRUE), wing)) + geom_boxplot()
+
+
 genreCountPlot <- genreCountPlot + theme(axis.text.x = element_text(angle = 90, 
                                                                     hjust = 1))
 genreCountPlot <- genreCountPlot + ylab("number of movies") + xlab("genre")
 genreCountPlot <- genreCountPlot + coord_flip()
 print(genreCountPlot)
 
-p1<-edx%>%ggplot(aes(x=rating, y=..count.., color=genres))+geom_histogram()
+p1<-edx%>%ggplot(aes(x=reorder(rating, y=..count..)))+geom_histogram()
 
 ###########################################################################
-# Define the outcome and predictors
+# Method
 
 #Outcome
 y<-edx$ratings
@@ -170,7 +170,7 @@ y<-edx$ratings
 x<-edx
   
 # Generate training and test sets
-set.seed(20)
+set.seed(107)
 test_index <- createDataPartition(y=edx$ratings, times = 1, p = 0.5, list = FALSE)
 test_set <- edx[test_index, ]
 train_set <- edx[-test_index, ]  
