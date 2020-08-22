@@ -179,13 +179,13 @@ ggplot(aes(x= reorder(genres, count), y=count))+
   theme(plot.title = element_text(hjust = 0.5))
   
 # Number of ratings 4, 4.5 and 5 by genre over years for each Genre
-edx%>%filter(rating==4| rating==4.5 | rating==5)%>%group_by(rating_time, genres)%>%
+edx%>%filter(rating==4| rating==4.5 | rating==5, n()>100)%>%group_by(rating_time, genres)%>%
   summarise(count=n())%>%
   ggplot(aes(rating_time, count, color=genres) )+
   #scale_x_continuous(breaks=seq(rating_time))+
   ggtitle("Number of Ratings 4, 4.5 and 5 over Years") +
   labs(subtitle = " ", x="years" , y="Number of Ratings") +
-  theme(plot.title = element_text(hjust = 0.5))
+  theme(plot.title = element_text(hjust = 0.5))+
   geom_line()
 
 
