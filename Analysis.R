@@ -98,40 +98,30 @@ sum(is.na(edx))
 
 head(edx,10)
 
-#How many zeros were given as ratings in the edx dataset?
-sum(edx$rating==0)
-edx %>% filter(rating == 0) %>% tally()
-
-#How many different users and movies are in the edx dataset?
-edx %>%
-  summarize(n_users = n_distinct(userId),
+#HNumber of different users and movies are in the edx
+edx %>%summarize(n_users = n_distinct(userId),
             n_movies = n_distinct(movieId))
 
 #Number of movies in different genres
 edx%>%group_by(genres) %>%
-  summarize(count = n()) 
+summarize(count = n()) 
 edx
 
 # Number of different genres
 edx%>%summarize(genre = n_distinct(genres))
 edx
 
-#How many movie ratings are in each of the following genres in the edx dataset?
+#Number of ratings in each of the genre
 edx %>% group_by(genres) %>%e
-  summarize(count = n()) %>%
-  arrange(desc(count))
+summarize(count = n()) %>%
+arrange(desc(count))
 edx
 
-# Top 10 of movies with greatest number of ratings?
-edx%>%group_by(movieId)%>%mutate(count=n())%>%top_n(5)%>%arrange(desc(count()))
-#or
+# Top 10 of movies with greatest number of ratings
+edx%>%group_by(movieId)%>%mutate(count=n())%>%
+top_n(10)%>%arrange(desc(count()))
 
-edx %>% group_by(movieId, title) %>%
-  summarize(count = n()) %>%
-  arrange(desc(count))
-
-
-### What are the top 10 most given ratings in order from most to least?
+# Top 10 most given ratings 
 edx%>%group_by(rating)%>%summarize(count = n()) %>%
 arrange(desc(count))
 edx
@@ -141,24 +131,72 @@ edx
 ####################################
 library(ggplot2)
 
-# Distribution of ratings
-edx%>%summarize(average=mean(rating), sd=sd(rating))%>%ggplot(aes(x=release_year, ))
+# Distribution of number of ratings among Users and Movies.
+
+p_1<-edx %>% 
+  count(movieId) %>% 
+  ggplot(aes(n, y=..density..)) + 
+    geom_histogram(bins=30, fill=I("blue"), col=I("red"), alpha=.2) +
+    scale_x_log10() + 
+    geom_density(col = "black", lwd=0.2)+
+  ggtitle("Number of Movies vs. Proportion of Ratingscount") +
+  labs(subtitle  = " ", 
+    x="n Movies" , 
+    y="Proportions of n Ratings")+
+    theme(plot.title = element_text(hjust = 0.5))
+
+p_2<-edx %>% 
+  count(userId) %>% 
+  ggplot(aes(n, y=..density..)) + 
+  geom_histogram(bins=30, fill=I("grey"), col=I("red"), alpha=.2) +
+  scale_x_continuous(trans = "log10") + 
+  geom_density(col = "black", lwd=0.2)+
+  ggtitle("Number of Users vs Proportion of Ratingscount") +
+  labs(subtitle = " ",
+       x="n Users" , 
+       y="Proportion of n Ratings") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+gridExtra::grid.arrange(p_1, p_2, nrow = 1)
 
 
-genreCountPlot <- edx%>%ggplot(aes(x = reorder(genres,genres))) + 
-  geom_bar()+labs(x="Genre", y="Number of movies")+
-  geom_text(aes(label=count), hjust=0.1, size=4)
+# Number of ratings given each rating categorie from 0.5 to 5 stars
+edx %>% ggplot(aes(rating)) + geom_bar(fill=I("blue"), col=I("grey"), alpha=.2)+
+  scale_x_continuous(breaks=seq(0, 5, by= 0.5))+
+  ggtitle("Number of Ratings") +
+  labs(subtitle = " ", x="Ratings" , y="Number of Ratings")+
+  theme(plot.title = element_text(hjust = 0.5))
+    
+
+#Number of ratings for each genre
+edx%>%group_by(genres)%>%summarize(count=n())%>%
+ggplot(aes(x= reorder(genres, count), y=count))+
+  geom_bar(stat='identity')+
+  ggtitle("Number of Ratings for each Genre") +
+  coord_flip(y=c(0, 50))+
+  labs(x="Genre", y="n Ratings")+
+  geom_text(aes(label= count), hjust=-0.5, size=2) +
+  theme(plot.title = element_text(hjust = 0.5))
   
-edx%>%ggplot(x, aes(reorder(genres, rating, median, order=TRUE), wing)) + geom_boxplot()
+# Number of ratings 4, 4.5 and 5 by genre over years for each Genre
+edx%>%filter(rating==4| rating==4.5 | rating==5)%>%group_by(rating_time, genres)%>%
+  summarise(count=n())%>%
+  ggplot(aes(rating_time, count, color=genres) )+
+  #scale_x_continuous(breaks=seq(rating_time))+
+  ggtitle("Number of Ratings 4, 4.5 and 5 over Years") +
+  labs(subtitle = " ", x="years" , y="Number of Ratings") +
+  theme(plot.title = element_text(hjust = 0.5))
+  geom_line()
 
 
-genreCountPlot <- genreCountPlot + theme(axis.text.x = element_text(angle = 90, 
-                                                                    hjust = 1))
-genreCountPlot <- genreCountPlot + ylab("number of movies") + xlab("genre")
-genreCountPlot <- genreCountPlot + coord_flip()
-print(genreCountPlot)
+# Boxplot of ratings for each genre
 
-p1<-edx%>%ggplot(aes(x=reorder(rating, y=..count..)))+geom_histogram()
+
+
+
+
+
+
 
 ###########################################################################
 # Method
