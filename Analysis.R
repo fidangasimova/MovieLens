@@ -11,7 +11,7 @@ library(lubridate)
 #You should split the edx data into a training and test set or use cross-validation.
 
 
-data("movielens")
+#data("movielens")
 
 ################################
 # Create edx set, validation set
@@ -27,18 +27,20 @@ if(!require(data.table)) install.packages("data.table", repos = "http://cran.us.
 # https://grouplens.org/datasets/movielens/10m/
 # http://files.grouplens.org/datasets/movielens/ml-10m.zip
 
-dl <- tempfile()
-download.file("http://files.grouplens.org/datasets/movielens/ml-10m.zip", dl)
+#dl <- tempfile()
+#download.file("http://files.grouplens.org/datasets/movielens/ml-10m.zip", dl)
 
-ratings <- fread(text = gsub("::", "\t", readLines(unzip(dl, "ml-10M100K/ratings.dat"))),
+#ratings <- fread(text = gsub("::", "\t", readLines(unzip(dl, "ml-10M100K/ratings.dat"))),
+#                 col.names = c("userId", "movieId", "rating", "timestamp"))
+#movies <- str_split_fixed(readLines(unzip(dl, "ml-10M100K/movies.dat")), "\\::", 3)
+
+ratings <- fread(text = gsub("::", "\t", readLines("ml-10M100K/ratings.dat")),
                  col.names = c("userId", "movieId", "rating", "timestamp"))
-
-movies <- str_split_fixed(readLines(unzip(dl, "ml-10M100K/movies.dat")), "\\::", 3)
+movies <- str_split_fixed(readLines("ml-10M100K/movies.dat"), "\\::", 3)
 colnames(movies) <- c("movieId", "title", "genres")
 movies <- as.data.frame(movies, stringsAsFactors=TRUE) %>% mutate(movieId = as.numeric(levels(movieId))[movieId], 
                                                                   title = as.character(title),
                                                                   genres = as.character(genres))
-
 movielens <- left_join(ratings, movies, by = "movieId")
 
 #################################################
@@ -64,7 +66,7 @@ edx <- rbind(edx, removed)
 rm(dl, ratings, movies, test_index, temp, movielens, removed)
 
 # REMOVE ME LATER
-edx <- edx[1:100,]
+edx <- edx[1:100000,]
 
 #############################################################
 #           Data cleaning and exporation                  ##
@@ -72,7 +74,7 @@ edx <- edx[1:100,]
 
 # edx summary
 summary(edx)
-str(edx)
+
 #Number of variables
 ncol(edx)
 #Number of observarions
@@ -88,7 +90,7 @@ edx<-extract(edx, title, c("title", "release_year"), "(.*)\\((\\d{4})\\)$")
 edx<-transform(edx, release_year = as.numeric(release_year))
 
 #Split genres into single columns per genre
-edx<-edx %>% separate_rows(genres, sep = "\\|")
+edx<-separate_rows(edx, genres, sep = "\\|")
 
 #Transform the rating timestamp to datetime year
 edx<-transform(edx, rating_time = round_date(as_datetime(timestamp), unit="month"))
