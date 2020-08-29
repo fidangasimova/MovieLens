@@ -45,7 +45,7 @@ The edx data consists of following variables:
 
 -*"rating"* a numerical variable from 0 to 5.
 
--*"timestamp"* represent time when rating was given in seconds since Janyary 1, 1970 
+-*"timestamp"* represents time when rating was given in seconds since January 1, 1970 
 
 # Data exploration and data processing
 

@@ -69,7 +69,7 @@ rm(dl, ratings, movies, test_index, temp, movielens, removed)
 edx <- edx[1:100000,]
 
 #############################################################
-#           Data cleaning and exporation                  ##
+#           Data processing                               ##
 #############################################################
 
 # edx summary
@@ -77,6 +77,7 @@ summary(edx)
 
 #Number of variables
 ncol(edx)
+
 #Number of observarions
 nrow(edx)
 
@@ -100,52 +101,34 @@ sum(is.na(edx))
 
 head(edx,10)
 
-#HNumber of different users and movies are in the edx
-edx %>%summarize(n_users = n_distinct(userId),
-            n_movies = n_distinct(movieId))
+##############################################
+#   Visualization and Descriptive statistics #
+#############################################
+library(ggplot2)
 
-#Number of movies in different genres
-edx%>%group_by(genres) %>%
-summarize(count = n()) 
-edx
-
-# Number of different genres
-edx%>%summarize(genre = n_distinct(genres))
-edx
-
-#Number of ratings in each of the genre
-edx %>% group_by(genres) %>%e
-summarize(count = n()) %>%
-arrange(desc(count))
-edx
+#######################
+# USERS and MOVIES
 
 # Top 10 of movies with greatest number of ratings
 edx%>%group_by(movieId)%>%mutate(count=n())%>%
-top_n(10)%>%arrange(desc(count()))
+  top_n(10)%>%arrange(desc(count()))
 
-# Top 10 most given ratings 
-edx%>%group_by(rating)%>%summarize(count = n()) %>%
-arrange(desc(count))
-edx
-
-####################################
-#   Visualization
-####################################
-library(ggplot2)
+#Number of different users and movies in edx
+edx %>%summarize(n_users = n_distinct(userId),
+                 n_movies = n_distinct(movieId))
 
 # Distribution of number of ratings among Users and Movies.
-
 p_1<-edx %>% 
   count(movieId) %>% 
   ggplot(aes(n, y=..density..)) + 
-    geom_histogram(bins=30, fill=I("blue"), col=I("red"), alpha=.2) +
-    scale_x_log10() + 
-    geom_density(col = "black", lwd=0.2)+
+  geom_histogram(bins=30, fill=I("blue"), col=I("red"), alpha=.2) +
+  scale_x_log10() + 
+  geom_density(col = "black", lwd=0.2)+
   ggtitle("Number of Movies vs. Proportion of Ratingscount") +
   labs(subtitle  = " ", 
     x="n Movies" , 
     y="Proportions of n Ratings")+
-    theme(plot.title = element_text(hjust = 0.5))
+  theme(plot.title = element_text(hjust = 0.5))
 
 p_2<-edx %>% 
   count(userId) %>% 
@@ -161,44 +144,90 @@ p_2<-edx %>%
 
 gridExtra::grid.arrange(p_1, p_2, nrow = 1)
 
+###########################################
+# Distribution of Ratings
 
-# Number of ratings given each rating categorie from 0.5 to 5 stars
+# Top 10 most given ratings 
+edx%>%group_by(rating)%>%summarize(count = n()) %>%
+  arrange(desc(count))
+
+# Number of ratings given each rating categories from 0.5 to 5 stars
 edx %>% ggplot(aes(rating)) + geom_bar(fill=I("blue"), col=I("grey"), alpha=.2)+
   scale_x_continuous(breaks=seq(0, 5, by= 0.5))+
   ggtitle("Number of Ratings") +
-  labs(subtitle = " ", x="Ratings" , y="Number of Ratings")+
+  labs(x="Ratings" , y="Number of Ratings")+
   theme(plot.title = element_text(hjust = 0.5))
-    
+# As we can see 3 and 4 are the most given ratings   
+
+########################################
+# GENRE
+
+#Number of movies in different genres
+edx%>%group_by(genres) %>%
+  summarize(count = n()) 
+
+# Number of different genres
+edx%>%summarize(genre = n_distinct(genres))
+
+#Number of ratings in each of the genre
+edx %>% group_by(genres) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count))
 
 #Number of ratings for each genre
 edx%>%group_by(genres)%>%summarize(count=n())%>%
 ggplot(aes(x= reorder(genres, count), y=count))+
-  geom_bar(stat='identity')+
+  geom_bar(stat='identity', color="blue")+
   ggtitle("Number of Ratings for each Genre") +
-  coord_flip(y=c(0, 50))+
+  coord_flip(y=c(0, 50000))+
   labs(x="Genre", y="n Ratings")+
   geom_text(aes(label= count), hjust=-0.5, size=2) +
   theme(plot.title = element_text(hjust = 0.5))
-  
-# Number of ratings 4, 4.5 and 5 by genre over years for each Genre
-edx%>%filter(rating==4| rating==4.5 | rating==5, n()>100)%>%group_by(rating_time, genres)%>%
-  summarise(count=n())%>%
-  ggplot(aes(rating_time, count, color=genres) )+
-  #scale_x_continuous(breaks=seq(rating_time))+
-  ggtitle("Number of Ratings 4, 4.5 and 5 over Years") +
-  labs(subtitle = " ", x="years" , y="Number of Ratings") +
-  theme(plot.title = element_text(hjust = 0.5))+
-  geom_line()
+# Drama, Comedy and Action genre received the most ratings 
 
+# Number of ratings starting from 3.5 by genre over years for each Genre
+edx%>%filter(rating>=3.5)%>%group_by(genres,rating_time)%>%
+  summarise(count=n()) %>%filter(count>1000)%>%arrange(desc(count))%>%
+  ggplot(aes(rating_time, count, color=genres) )+
+  geom_line()+
+  #scale_x_continuous(breaks=seq((1930, 2018, by= 1)))+
+  ggtitle("Number of Ratings from 3.5 to 5 over Years") +
+  labs(x="years", y="Number of Ratings") +
+  theme(plot.title = element_text(hjust = 0.5))
+  
+#Drama remained a popular choice over years by receiving the most number of ratings from 3.5 and above. 
 
 # Boxplot of ratings for each genre
+edx%>%group_by(genres)%>%
+  mutate(count=n(), avg_rating=mean(rating), se_rating=sd(rating)/sqrt(count))%>%
+  ggplot(aes(x=reorder(genres, avg_rating), y=avg_rating, ymin = avg_rating-2*se_rating, ymax = avg_rating+2*se_rating), width=0.1, size=1.3 )+
+  geom_point()+geom_errorbar()+
+  ggtitle("Error Bar by Genre") +
+  labs(x="Genre" , y="Average Rating") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+###############################################
+# TIME
+
+# Average rating over release vs. rating years
+p_3<-edx%>%group_by(release_year)%>%
+  mutate(count=n(), avg_rating=mean(rating), se_rating=sd(rating)/sqrt(count))%>%
+  ggplot(aes(release_year, avg_rating, ymin=avg_rating-2*se_rating, ymax=avg_rating+2*se_rating),width=0.1, size=1.3 )+
+  geom_line()+geom_point()+geom_errorbar()+
+  ggtitle("Average Rating over Release Years with Error Bar") +
+  labs(x="Release Year" , y="Average Rating") +
+  theme(plot.title = element_text(hjust = 0.5))
 
 
-
-
-
-
-
+p_4<- edx%>%group_by(rating_time)%>%
+  mutate(count=n(), avg_rating=mean(rating), se_rating=sd(rating)/sqrt(count))%>%
+  ggplot(aes(rating_time, avg_rating, ymin=avg_rating-2*se_rating, ymax=avg_rating+2*se_rating), width=0.1, size=1.3 )+
+  geom_line()+geom_point()+geom_errorbar()+
+  #scale_x_continuous(breaks=seq(1930, 2018, by= 1))+
+  ggtitle("Average Rating over Rating Years with Error Bar") +
+  labs(x="Rating Year" , y="Average Rating") +
+  theme(plot.title = element_text(hjust = 0.5))
+gridExtra::grid.arrange(p_3, p_4, nrow = 1)
 
 ###########################################################################
 # Method
