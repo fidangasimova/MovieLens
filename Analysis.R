@@ -94,8 +94,10 @@ edx<-transform(edx, release_year = as.numeric(release_year))
 edx<-separate_rows(edx, genres, sep = "\\|")
 
 #Transform the rating timestamp to datetime year
-edx<-transform(edx, rating_time = round_date(as_datetime(timestamp), unit="month"))
-  
+#edx<-transform(edx, rating_time = round_date(as_datetime(timestamp), unit="month"))
+edx<-transform(edx, rating_year = year(as_datetime(timestamp))) 
+#remove variable rating_time
+within(edx, rm(rating_time))
 #Check missing values
 sum(is.na(edx))
 
@@ -206,9 +208,21 @@ edx%>%group_by(genres)%>%
   labs(x="Genre" , y="Average Rating") +
   theme(plot.title = element_text(hjust = 0.5))
 
+
+
 ###############################################
 # TIME
 
+# Average rating over years when rating was given
+edx %>% group_by(rating_year) %>%summarize(avg_rating = mean(rating)) %>%
+  ggplot(aes(rating_year, avg_rating)) +
+  geom_point() +geom_smooth()+
+  scale_y_continuous(breaks=seq(0, 5, by= 0.5))+
+  ggtitle("Average Rating over Rating Year") +
+  labs(x="Rating Year" , y="Average Rating") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# In more detail to compare release with rating year:
 # Average rating over release vs. rating years
 p_3<-edx%>%group_by(release_year)%>%
   mutate(count=n(), avg_rating=mean(rating), se_rating=sd(rating)/sqrt(count))%>%
@@ -219,9 +233,9 @@ p_3<-edx%>%group_by(release_year)%>%
   theme(plot.title = element_text(hjust = 0.5))
 
 
-p_4<- edx%>%group_by(rating_time)%>%
+p_4<- edx%>%group_by(rating_year)%>%
   mutate(count=n(), avg_rating=mean(rating), se_rating=sd(rating)/sqrt(count))%>%
-  ggplot(aes(rating_time, avg_rating, ymin=avg_rating-2*se_rating, ymax=avg_rating+2*se_rating), width=0.1, size=1.3 )+
+  ggplot(aes(rating_year, avg_rating, ymin=avg_rating-2*se_rating, ymax=avg_rating+2*se_rating), width=0.1, size=1.3 )+
   geom_line()+geom_point()+geom_errorbar()+
   #scale_x_continuous(breaks=seq(1930, 2018, by= 1))+
   ggtitle("Average Rating over Rating Years with Error Bar") +
@@ -251,4 +265,7 @@ train_set <- edx[-test_index, ]
   semi_join(train_set, by = "movieId") %>%
   semi_join(train_set, by = "userId")
 
-
+  
+  
+RMSE <- function(true_ratings, predicted_ratings){ sqrt(mean((true_ratings - predicted_ratings)^2))
+  }
