@@ -35,9 +35,9 @@ head(edx, 5)
 The edx data consists of following variables:
 
 -*"movieId"* is a numerical variable denotes id's for each movie starts with 1 to 163949. 
--*"title"* is a string varible describing the title of a movie.
+-*"title"* is a string variable describing the title of a movie.
 
--*"year"* mumerical variable with the year of movie release from 1902 to 2016.
+-*"year"* numerical variable with the year of movie release from 1902 to 2016.
 
 -*"genres"* is a categorical variable that represent 17 different genres 
 
@@ -49,7 +49,7 @@ The edx data consists of following variables:
 
 # Data exploration and data processing
 
-Several steps before using the data for visualization: 
+Several steps before using the data for visualization: The variable "title" was split in 2 variables "title" and "release_year". The variable "timestamp" was transformed to a  year format and called "rating_year". The original "genre" variable represents a combination of several genres, this variable was split in 17 distinct genres.
 
 #Sort data by movieId 
 edx<-arrange(edx, by=movieId)
@@ -65,7 +65,8 @@ edx<-edx %>% separate_rows(genres, sep = "\\|")
 
 #Transform the rating timestamp to datetime year
 edx<-transform(edx, rating_time = round_date(as_datetime(timestamp), unit="month"))
-  
+
+# The data set edx contains no missing values  
 #Check missing values
 sum(is.na(edx))
 
@@ -119,29 +120,33 @@ plot(pressure)
 
 ## Method Section
 
-The "edx" data set will be split into a training set and the test set.
+The algorithm will be developed using the edx data, which will be split into a training_set and the test_set. The train_set will be used to train all models. There are 6 possible predictors of rating: genre, release_year, rating_year, movieId, userId, title. Models based on one and a combination of several predictors will be tested on the train_set. The test_set will be used to calculate RMSE of each model. RMSE of multiple models will be compared with each other.  
 
-# Generate training and test sets
+The validation set will be only used in the final step. The final model with the smallest RMSE will be chosen to be applied on edx data to calculate parameters of the model. Ratings will be predicted in the validation set. In last step this model will be evaluated by calculating RMSE on validation set.
+
+# Split edx in test and train set
 set.seed(107)
 test_index <- createDataPartition(y=edx$ratings, times = 1, p = 0.5, list = FALSE)
 test_set <- edx[test_index, ]
 train_set <- edx[-test_index, ]  
 
-Develop your algorithm using the edx set. For a final test of your algorithm, predict movie ratings in the validation set (the final hold-out test set) as if they were unknown. RMSE will be used to evaluate how close your predictions are to the true values in the validation set (the final hold-out test set).
+
 
 Important: The validation data (the final hold-out test set) should NOT be used for training your algorithm and should ONLY be used for evaluating the RMSE of your final algorithm. You should split the edx data into separate training and test sets to design and test your algorithm.
 
 
 
 Explain the method and techniques used, Visualization with insights, data exploration. Use at least two Methods 
-You will use the following code to generate your datasets. Develop your algorithm using the edx set. For a final test of your algorithm, predict movie ratings in the validation set (the final hold-out test set) as if they were unknown. RMSE will be used to evaluate how close your predictions are to the true values in the validation set (the final hold-out test set).
+You will use the following code to generate your data sets. Develop your algorithm using the edx set. For a final test of your algorithm, predict movie ratings in the validation set (the final hold-out test set) as if they were unknown. RMSE will be used to evaluate how close your predictions are to the true values in the validation set (the final hold-out test set).
 
 Prediction Performance
 RMSE in validation data set >90?
 
 ## Results Section
 
-Resultes presented and discussed.Model performance. 
+For a final test of the algorithm, predict movie ratings were predicted in the validation set  as if they were unknown. RMSE was used to evaluate how close predictions of rating were to the true values in the validation set.
+
+# Model performance. 
 
 
 ## Conclusion Section
