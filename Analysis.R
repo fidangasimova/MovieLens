@@ -11,8 +11,6 @@ library(lubridate)
 #You should split the edx data into a training and test set or use cross-validation.
 
 
-#data("movielens")
-
 ################################
 # Create edx set, validation set
 ################################
@@ -67,7 +65,7 @@ rm(dl, ratings, movies, test_index, temp, movielens, removed)
 
 #########################################
 # Validation Data processing 
-
+validation <-validation[1:100000,]
 #Sort data by movieId 
 validation<-arrange(validation, by=movieId)
 
@@ -80,6 +78,7 @@ validation<-transform(validation, release_year = as.numeric(release_year))
 #Split genres into single columns per genre
 validation<-separate_rows(validation, genres, sep = "\\|")
 
+validation<-transform(validation, rating_year = year(as_datetime(timestamp))) 
 #####################################################
 # REMOVE ME LATER
 

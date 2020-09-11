@@ -1,6 +1,7 @@
+
 .Rproj.user
 .Rhistory
-.RData
+*.RData
 .Ruserdata
 /ml-10M100K/
 .DS_Store
