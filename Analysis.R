@@ -69,7 +69,7 @@ rm(dl, ratings, movies, test_index, temp, movielens, removed)
 # Validation Data processing 
 
 #Sort data by movieId 
-validation<-arrange(edx, by=movieId)
+validation<-arrange(validation, by=movieId)
 
 # Split title and year into separate columns
 validation<-extract(validation, title, c("title", "release_year"), "(.*)\\((\\d{4})\\)$")
@@ -126,8 +126,8 @@ head(edx,10)
 library(ggplot2)
 
 #######################
-# USERS and MOVIES   #
-######################
+# USERS and MOVIES    #
+#######################
 
 # Top 10 of movies with greatest number of ratings
 edx%>%group_by(movieId)%>%mutate(count=n())%>%
@@ -169,7 +169,8 @@ gridExtra::grid.arrange(p_1, p_2, nrow = 1)
 ###########################
 
 # Top 10 most given ratings 
-edx%>%group_by(rating)%>%summarize(count = n()) %>%
+edx%>%group_by(rating)%>%
+  summarize(count = n()) %>%
   arrange(desc(count))
 
 # Number of ratings given each rating categories from 0.5 to 5 stars
@@ -241,6 +242,11 @@ edx %>% group_by(rating_year) %>%summarize(avg_rating = mean(rating)) %>%
   labs(x="Rating Year" , y="Average Rating") +
   theme(plot.title = element_text(hjust = 0.5))
 
+# Highest number of given ratings 
+edx%>%group_by(rating, rating_year)%>%
+  summarise(n=n(), max=max(n))%>%
+  arrange(desc(max))
+
 # In more detail to compare release with rating year:
 # Average rating over release vs. rating years
 p_3<-edx%>%group_by(release_year)%>%
@@ -264,7 +270,6 @@ gridExtra::grid.arrange(p_3, p_4, nrow = 1)
 #############
 # Method    #
 #############
-
 # Generate training and test sets
 library(caret)
 set.seed(107)
@@ -274,46 +279,53 @@ train_set <- edx[-test_index, ]
 
 # To make sure we don’t include users and movies in the test set that do not appear in the training set, 
 # remove these entries using the semi_join function:
-  
 test_set <- test_set %>% 
 semi_join(train_set, by = "movieId") %>%
 semi_join(train_set, by = "userId")
 
-  
 # RMSE function  
-RMSE <- function(true_ratings, predicted_ratings){ sqrt(mean((true_ratings - predicted_ratings)^2))
-}
+RMSE <- function(true_ratings, predicted_ratings)
+{ sqrt(mean((true_ratings - predicted_ratings)^2))}
 
 # (M1) Model with movie effects
-# least squares estimate b_i is just the average of Yu,i − μˆ for each movie i.
+# least squares estimate b_m is just the average of Yu,i − μˆ for each movie i.
+#Average rating 
 mu <- mean(train_set$rating)
-
+#Estimate movie effect b_m
 movie_ef <- train_set %>%
   group_by(movieId) %>%
-  summarize(b_i = mean(rating - mu))
+  summarize(b_m = mean(rating - mu))
 
-# how much our prediction improves once we use yˆ = μˆ + b :
-predicted_ratings <- mu + test_set %>%
+# Estimate predicted ratings
+predicted_ratings <- test_set %>%
   left_join(movie_ef, by='movieId') %>%
-  pull(b_i)
+  mutate(pred = mu + b_m) %>%
+  pull(pred)
 
 rmes_1<-RMSE(predicted_ratings, test_set$rating)
 
 rmse_results <- data_frame(Model = "Movie Effect", RMSE = rmes_1)
 rmse_results%>% knitr::kable()
 
-# (M2) Model with user effect
+# (M2) Model with movie and user effect
 # Yu,i = μ+bi +bu +εu,i, compute an approximation by computing μˆ 
-# and b_i and estimating b_u as the average of yu,i − μˆ − bi
+# and b_m and estimating b_u as the average of yu,i − μˆ − bi
+mu <- mean(train_set$rating)
+
+#Estimate movie effect b_m
+movie_ef <- train_set %>%
+  group_by(movieId) %>%
+  summarize(b_m = mean(rating - mu))
+#Estimate user effect b_u
 user_ef <- train_set %>%
   left_join(movie_ef, by='movieId') %>%
   group_by(userId) %>%
-  summarize(b_u = mean(rating - mu - b_i))
-
+  summarize(b_u = mean(rating - mu - b_m))
+#Estimate predicted rating
 predicted_ratings <- test_set %>%
   left_join(movie_ef, by='movieId') %>%
   left_join(user_ef, by='userId') %>%
-  mutate(pred = mu + b_i + b_u) %>%
+  mutate(pred = mu + b_m + b_u) %>%
   pull(pred)
 
 rmse_2<-RMSE(predicted_ratings, test_set$rating)
@@ -324,12 +336,47 @@ rmse_results <- bind_rows(rmse_results,
 
 rmse_results%>% knitr::kable()
 
+# (M3) Model with movie, user and genre effect
+# Yu,i = μ+bi +bu +εu,i, compute an approximation by computing μˆ 
+# and b_m and estimating b_u as the average of yu,i − μˆ − bi
+mu <- mean(train_set$rating)
+
+#Estimate movie effect b_m
+movie_ef <- train_set %>%
+  group_by(movieId) %>%
+  summarize(b_m = mean(rating - mu))
+#Estimate user effect b_u
+user_ef <- train_set %>%
+  left_join(movie_ef, by='movieId') %>%
+  group_by(userId) %>%
+  summarize(b_u = mean(rating - mu - b_m))
+#Estimate genre effect b_g
+genre_ef<-train_set%>%
+  group_by(genres)%>%
+  left_join(movie_ef, by="movieId")%>%
+  left_join(user_ef, by="userId")%>%
+  summarize(b_g = mean(rating - mu - b_m- b_u))
+
+predicted_ratings <- test_set %>%
+  left_join(movie_ef, by='movieId') %>%
+  left_join(user_ef, by='userId') %>%
+  left_join(genre_ef, by='genres') %>%
+  mutate(pred = mu + b_m + b_u + b_g) %>%
+  pull(pred)
+
+rmse_3<-RMSE(predicted_ratings, test_set$rating)
+
+rmse_results <- bind_rows(rmse_results,
+                          data_frame(Model="Movie, User and Genre Effect Model",
+                                     RMSE = rmse_3))
+
+rmse_results%>% knitr::kable()
 
 #######################################################
 # Regularization Method with  λ as a tuning parameter #
 #######################################################
 
-# (M3) model with the regularized movie effect with tuning parameter
+# (M4) model with the regularized movie effect with tuning parameter
 # Choosing the tuning parameter lambda by using cross-validation
 
 lambda <- seq(0, 20, 0.10)
@@ -338,20 +385,20 @@ rmses_m_ef_reg <- sapply(lambda, function(l){
   
 mu <- mean(train_set$rating)
   
-b_i <- train_set %>%
+b_m <- train_set %>%
   group_by(movieId) %>%
-  summarize(b_i = sum(rating - mu)/(n()+l), n_i = n())
+  summarize(b_m = sum(rating - mu)/(n()+l), n_m = n())
 
 predicted_ratings <-test_set %>%
-    left_join(b_i, by = "movieId") %>%
-    mutate(pred = mu + b_i) %>% pull(pred)
+    left_join(b_m, by = "movieId") %>%
+    mutate(pred = mu + b_m) %>% pull(pred)
   
 rmses_m_ef_reg<-return(RMSE(predicted_ratings, test_set$rating))
 })
 
 qplot(lambda, rmses_m_ef_reg)
 
-# (M3) the model with the regularized movie effect  
+# (M4) the model with the regularized movie effect  
 # tuning parameter l with minimal RMSE
 
 l_1<-lambda[which.min(rmses_m_ef_reg)]
@@ -361,21 +408,21 @@ mu <- mean(train_set$rating)
 #Estimate movie effect
 movie_ef_reg <- train_set %>%
   group_by(movieId) %>%
-  summarize(b_i = sum(rating - mu)/(n()+l_1), n_i = n())
+  summarize(b_m = sum(rating - mu)/(n()+l_1), n_m = n())
 #Estimate ratings
 predicted_ratings <- test_set %>%
   left_join(movie_ef_reg, by = "movieId") %>%
-  mutate(pred = mu + b_i) %>%
+  mutate(pred = mu + b_m) %>%
   pull(pred)
 
-rmse_3<-RMSE(predicted_ratings, test_set$rating)
+rmse_4<-RMSE(predicted_ratings, test_set$rating)
 rmse_results <- bind_rows(rmse_results,
                           data_frame(Model="Regularized Movie Effect Model",
-                                     RMSE = rmse_3))
+                                     RMSE = rmse_4))
 
 rmse_results%>% knitr::kable()
 
-# (M4) model with the regularized regularized movie + user effect with tuning parameter 
+# (M5) model with the regularized regularized movie + user effect with tuning parameter 
 # Choosing the tuning parameter lambda by using cross-validation
 
 lambda <- seq(0, 20, 0.10)
@@ -384,19 +431,19 @@ rmses_mu_ef_reg <- sapply(lambda, function(l){
 
 mu <- mean(train_set$rating)
   
-b_i <- train_set %>%
+b_m <- train_set %>%
   group_by(movieId) %>%
-  summarize(b_i = sum(rating - mu)/(n()+l), n_i = n())
+  summarize(b_m = sum(rating - mu)/(n()+l), n_m = n())
   
 b_u <- train_set %>%
-  left_join(b_i, by="movieId") %>%
+  left_join(b_m, by="movieId") %>%
   group_by(userId) %>%
-  summarize(b_u = sum(rating - b_i - mu)/(n()+l), n_u = n())
+  summarize(b_u = sum(rating - b_m - mu)/(n()+l), n_u = n())
   
 predicted_ratings <-test_set %>%
-  left_join(b_i, by = "movieId") %>%
+  left_join(b_m, by = "movieId") %>%
   left_join(b_u, by = "userId") %>% 
-  mutate(pred = mu + b_i + b_u) %>%
+  mutate(pred = mu + b_m + b_u) %>%
   pull(pred)
 
 rmses_mu_ef_reg<-return(RMSE(predicted_ratings, test_set$rating))
@@ -405,7 +452,7 @@ rmses_mu_ef_reg<-return(RMSE(predicted_ratings, test_set$rating))
 qplot(lambda, rmses_mu_ef_reg)
 
 
-# (M4) Model with the regularized movie + user effect 
+# (M5) Model with the regularized movie + user effect 
 # tuning parameter l with minimal RMSE 
 
 l_2<-lambda[which.min(rmses_mu_ef_reg)]
@@ -416,26 +463,26 @@ mu <- mean(train_set$rating)
 #Estimate movie effect
 movie_ef_reg <- train_set %>%
   group_by(movieId) %>%
-  summarize(b_i = sum(rating - mu)/(n()+l_2), n_i= n())
+  summarize(b_m = sum(rating - mu)/(n()+l_2), n_m= n())
 
 #Estimate user effect  
 user_ef_reg <- train_set %>%
   left_join(movie_ef_reg, by='movieId') %>% 
   group_by(userId) %>%
-  summarize(b_u = sum(rating - b_i - mu)/(n() +l_2), n_u = n())
+  summarize(b_u = sum(rating - b_m - mu)/(n() +l_2), n_u = n())
 
 # Estimate predicted ratings 
 predicted_ratings <- test_set %>%
   left_join(movie_ef_reg, by = "movieId") %>%
   left_join(user_ef_reg, by = "userId") %>%
-  mutate(pred = mu + b_i + b_u) %>%
+  mutate(pred = mu + b_m + b_u) %>%
   pull(pred)
 
 # Calculate RMSE to evaluate the model
-rmse_4<-RMSE(predicted_ratings, test_set$rating)
+rmse_5<-RMSE(predicted_ratings, test_set$rating)
 rmse_results <- bind_rows(rmse_results,
                           data_frame(Model="Regularized Movie and User Effect Model",
-                                     RMSE = rmse_4))
+                                     RMSE = rmse_5))
 
 rmse_results%>% knitr::kable()
 
@@ -452,34 +499,33 @@ rmses_mug_ef_reg <- sapply(lambda, function(l){
   
 mu <- mean(train_set$rating)
   
-b_i <- train_set %>%
+b_m <- train_set %>%
     group_by(movieId) %>%
-    summarize(b_i = sum(rating - mu)/(n()+l), n_i = n())
+    summarize(b_m = sum(rating - mu)/(n()+l), n_m = n())
   
 b_u <- train_set %>%
-  left_join(b_i, by="movieId") %>%
+  left_join(b_m, by="movieId") %>%
   group_by(userId) %>%
-  summarize(b_u = sum(rating - b_i - mu)/(n()+l), n_u = n())
+  summarize(b_u = sum(rating - b_m - mu)/(n()+l), n_u = n())
   
 b_g <- train_set %>%
   group_by(genres)%>%
-  left_join(b_i, by="movieId") %>%
+  left_join(b_m, by="movieId") %>%
   left_join(b_u, by="userId") %>%
-  summarize(b_g = sum(rating - b_i - b_u - mu)/(n()+l), n_u = n())
+  summarize(b_g = sum(rating - b_m - b_u - mu)/(n()+l), n_u = n())
   
 predicted_ratings <-test_set %>%
-  left_join(b_i, by = "movieId") %>%
+  left_join(b_m, by = "movieId") %>%
   left_join(b_u, by = "userId") %>% 
   left_join(b_g, by = "genres") %>% 
-  mutate(pred = mu + b_i + b_u +b_g) %>%
+  mutate(pred = mu + b_m + b_u +b_g) %>%
   pull(pred)
   
 rmses_mug_ef_reg<-return(RMSE(predicted_ratings, test_set$rating))
 })
 qplot(lambda, rmses_mug_ef_reg)
 
-# (M5) Model with the regularized movie + user+ genre effect 
-
+# (M6) Model with the regularized movie + user+ genre effect 
 # tuning parameter l with minimal RMSE 
 l_3<-lambda[which.min(rmses_mug_ef_reg)]
 l_3
@@ -490,69 +536,71 @@ mu <- mean(train_set$rating)
 #Estimate movie effect
 movie_ef_reg <- train_set %>%
   group_by(movieId) %>%
-  summarize(b_i = sum(rating - mu)/(n()+l_3), n_i= n())
+  summarize(b_m = sum(rating - mu)/(n()+l_3), n_m= n())
 
 #Estimate user effect
 user_ef_reg <- train_set %>%
   left_join(movie_ef_reg, by='movieId') %>% 
   group_by(userId) %>%
-  summarize(b_u = sum(rating - b_i - mu)/(n() +l_3), n_u = n())
+  summarize(b_u = sum(rating - b_m - mu)/(n() +l_3), n_u = n())
 
 # Estimate genre effect
 genre_ef_reg <- train_set %>%
   group_by(genres)%>%
   left_join(movie_ef_reg, by="movieId") %>%
   left_join(user_ef_reg, by="userId") %>%
-  summarize(b_g = sum(rating - b_i - b_u - mu)/(n()+l_3), n_u = n())
+  summarize(b_g = sum(rating - b_m - b_u - mu)/(n()+l_3), n_g = n())
 
 # Estimate predicted ratings 
 predicted_ratings <- test_set %>%
   left_join(movie_ef_reg, by = "movieId") %>%
   left_join(user_ef_reg, by = "userId") %>%
   left_join(genre_ef_reg, by="genres")%>%
-  mutate(pred = mu + b_i + b_u + b_g) %>%
+  mutate(pred = mu + b_m + b_u + b_g) %>%
   pull(pred)
 
 # Calculate RMSE to evaluate the model
-rmse_5<-RMSE(predicted_ratings, test_set$rating)
+rmse_6<-RMSE(predicted_ratings, test_set$rating)
 rmse_results <- bind_rows(rmse_results,
                           data_frame(Model="Regularized Movie, User and Genre Effect Model",
-                                     RMSE = rmse_5))
+                                     RMSE = rmse_6))
 
 rmse_results%>% knitr::kable()
-
+finale_model<-data.frame(data= c(rmse_1, rmse_6))
 ################
 # Final Model  #
 ################
 
 # The model with the lowest RMSE is chosen as a final model
 # and will be applied on the edx to predict ratings in the validation set
-mu_reg <- mean(edx$rating)
+#Average rating
+mu<- mean(edx$rating)
 
 # Previously chosen tuning parameter l 
-l_final <- l_2
-# Estimate regularized movie effect b_i by using chosen tuning parameter l
+l<- l_2
+# Estimate regularized movie effect b_m by using chosen tuning parameter l
 movie_ef_reg_final <- edx %>%
   group_by(movieId) %>%
-  summarize(b_i = sum(rating - mu_reg)/(n() + l_final), n_i =n())
+  summarize(b_m = sum(rating - mu)/(n() + l), n_m =n())
 
 # Estimate regularized user effect b_u using chosen tuning parameter l
 user_ef_reg_final <- edx %>%
   left_join(movie_ef_reg_final, by='movieId') %>% 
   group_by(userId) %>%
-  summarize(b_u = sum(rating - b_i - mu_reg)/(n() +l_final), n_u = n())
+  summarize(b_u = sum(rating - b_m - mu)/(n() +l), n_u = n())
 
 # Estimate predicted ratings 
 predicted_ratings <- validation %>%
   left_join(movie_ef_reg_final, by = "movieId") %>%
   left_join(user_ef_reg_final, by = "userId") %>%
-  mutate(pred = mu_reg + b_i + b_u) %>% pull(pred)
+  mutate(pred = mu + b_m + b_u) %>%
+  pull(pred)
 
 
 # validation$rating is used to report the final RMSE
 final_rmse<-RMSE(predicted_ratings, validation$rating)
 
 rmse_results <- bind_rows(rmse_results,
-                          data_frame(method="Regularized Movie and User Effect Model",  
+                          data_frame(Model="Regularized Movie and User Effect Model",  
                                      RMSE = final_rmse))
 rmse_results %>% knitr::kable()
