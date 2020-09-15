@@ -65,7 +65,7 @@ rm(ratings, movies, test_index, temp, movielens, removed)
 
 #########################################
 # Validation Data processing 
-validation <-validation[1:100000,]
+#validation <-validation[1:100000,]
 #Sort data by movieId 
 validation<-arrange(validation, by=movieId)
 
@@ -75,14 +75,15 @@ validation<-extract(validation, title, c("title", "release_year"), "(.*)\\((\\d{
 # Convert year character into to an integer
 validation<-transform(validation, release_year = as.numeric(release_year))
 
-#Split genres into single columns per genre
-validation<-separate_rows(validation, genres, sep = "\\|")
+# Transform the rating timestamp to datetime year
+validation<-transform(validation, rating_year = year(as_datetime(timestamp)))
 
-validation<-transform(validation, rating_year = year(as_datetime(timestamp))) 
+#Split genres into single columns per genre
+validation_genre<-separate_rows(validation, genres, sep = "\\|")
 #####################################################
 # REMOVE ME LATER
 
-edx_1 <- edx[1:100000,]
+#edx_1 <- edx[1:100000,]
 
 ############################
 #  edx Data processing     #
@@ -116,7 +117,7 @@ edx<-transform(edx, rating_year = year(as_datetime(timestamp)))
 edx<-edx%>%mutate(age_years=abs(rating_year-release_year))
   
 # Split genres into single columns per genre
-edx<-separate_rows(edx, genres, sep = "\\|")
+edx_genre<-separate_rows(edx, genres, sep = "\\|")
 
 
 # Check missing values
@@ -134,19 +135,23 @@ library(ggplot2)
 #######################
 
 # Top 10 of movies with greatest number of ratings
-edx%>%group_by(movieId)%>%mutate(count=n())%>%
-  top_n(10)%>%arrange(desc(count()))
+edx%>%group_by(movieId, userId)%>%mutate(count=n())%>%
+  top_n(10, count)%>%arrange(desc(count))%>%select(title, count)
+
+edx%>%mutate(movieId=unique(movieId))%>%group_by(title)%>%mutate(count=n())%>%
+  top_n(10)%>%arrange(desc(count))%>%select(title=unique(title))
 
 # Number of different users and movies in edx
 edx %>%summarize(n_users = n_distinct(userId),
                  n_movies = n_distinct(movieId))
+
 
 # Distribution of number of ratings among Users and Movies.
 p_1<-edx %>% 
   count(movieId) %>% 
   ggplot(aes(n, y=..density..)) + 
   geom_histogram(bins=30, fill=I("blue"), col=I("red"), alpha=.2) +
-  scale_x_log10() + 
+  scale_x_continuous(trans = "log10") + 
   geom_density(col = "black", lwd=0.2)+
   ggtitle("Number of Movies vs. Proportion of Ratingscount") +
   labs(subtitle  = " ", 
@@ -197,7 +202,7 @@ edx%>%group_by(genres) %>%
 edx%>%summarize(genre = n_distinct(genres))
 
 # Number of ratings in each of the genre
-edx %>% group_by(genres) %>%
+edx %>% summarize(genre = n_distinct(genres))%>%group_by(genres) %>%
   summarize(count = n()) %>%
   arrange(desc(count))
 
@@ -511,9 +516,8 @@ rmses_mu_ef_reg<-return(RMSE(predicted_ratings, test_set$rating))
 
 qplot(lambda, rmses_mu_ef_reg)
 
-
 # (M6) Model with the regularized movie + user effect 
-# tuning parameter l with minimal RMSE 
+# tuning parameter l_2 with minimal RMSE 
 l_2<-lambda[which.min(rmses_mu_ef_reg)]
 l_2
 #Average rating
@@ -583,7 +587,7 @@ rmses_mug_ef_reg<-return(RMSE(predicted_ratings, test_set$rating))
 qplot(lambda, rmses_mug_ef_reg)
 
 # (M7) Model with the regularized movie + user+ genre effect 
-# tuning parameter l with minimal RMSE 
+# tuning parameter l_3 with minimal RMSE 
 l_3<-lambda[which.min(rmses_mug_ef_reg)]
 l_3
 
@@ -622,7 +626,6 @@ rmse_results%>% knitr::kable()
 
 # (M8) model with the regularized movie + user + genre + age effect with tuning parameter lambda
 # Choosing the tuning parameter lambda by using cross-validation
-
 
 lambda <- seq(0, 20, 0.10)
 
