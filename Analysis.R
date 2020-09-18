@@ -65,7 +65,7 @@ rm(ratings, movies, test_index, temp, movielens, removed)
 
 #########################################
 # Validation Data processing 
-#validation <-validation[1:100000,]
+validation <-validation[1:10000,]
 #Sort data by movieId 
 validation<-arrange(validation, by=movieId)
 
@@ -83,7 +83,7 @@ validation_genre<-separate_rows(validation, genres, sep = "\\|")
 #####################################################
 # REMOVE ME LATER
 
-#edx_1 <- edx[1:100000,]
+edx <- edx[1:100000,]
 
 ############################
 #  edx Data processing     #
@@ -138,13 +138,10 @@ library(ggplot2)
 edx%>%group_by(movieId, userId)%>%mutate(count=n())%>%
   top_n(10, count)%>%arrange(desc(count))%>%select(title, count)
 
-edx%>%mutate(movieId=unique(movieId))%>%group_by(title)%>%mutate(count=n())%>%
-  top_n(10)%>%arrange(desc(count))%>%select(title=unique(title))
-
-# Number of different users and movies in edx
-edx %>%summarize(n_users = n_distinct(userId),
-                 n_movies = n_distinct(movieId))
-
+# Number of unique users, movies and movie titles in edx
+edx %>%summarize(n_users  = n_distinct(userId),
+                 n_movies = n_distinct(movieId),
+                 n_title  = n_distinct(title))
 
 # Distribution of number of ratings among Users and Movies.
 #Change the format from scientific to numerical
@@ -169,7 +166,10 @@ p_2<-edx %>%
   labs(x="n Users" , y="Proportion of n Ratings") +
   theme(plot.title = element_text(hjust = 0.5))
 
-gridExtra::grid.arrange(p_1, p_2, nrow = 1)
+p<-gridExtra::grid.arrange(p_1, p_2, nrow = 1)
+
+# Save p_1 and p_2 in one image
+ggsave("n_ratings_Users_Movies.png", p)
 
 ############################
 # Distribution of Ratings  #
@@ -186,6 +186,7 @@ edx %>% ggplot(aes(rating)) + geom_bar(fill=I("blue"), col=I("grey"), alpha=.2)+
   ggtitle("Number of Ratings") +
   labs(x="Ratings", y="n of Ratings")+
   theme(plot.title = element_text(hjust = 0.5))
+ggsave("Number of Ratings.png")
 # As we can see 3 and 4 are the most given ratings   
 
 ##########
@@ -200,7 +201,7 @@ edx_genre%>%group_by(genres) %>%
 edx_genre%>%summarize(genre = n_distinct(genres))
 
 # Number of ratings in each of the genre
-edx_genre %>% summarize(genre = n_distinct(genres))%>%group_by(genres) %>%
+edx_genre %>% summarize(genre = n_distinct(genres))%>%group_by(genre) %>%
   summarize(count = n()) %>%
   arrange(desc(count))
 
@@ -213,6 +214,7 @@ ggplot(aes(x= reorder(genres, count), y=count))+
   labs(x="Genre", y="n Ratings")+
   geom_text(aes(label= count), hjust=-0.1, size=3) +
   theme(plot.title = element_text(hjust = 0.5))
+ggsave("Number of Ratings for each Genre.png")
 # Drama, Comedy and Action genre received the most ratings 
 
 # Number of ratings over years when rating was given for each genre
@@ -228,9 +230,9 @@ edx_genre%>%na.omit() %>% filter(rating>4)%>% mutate(genres = as.factor(genres))
   labs(x="Rating Years", y="n of Ratings") +
   scale_x_continuous(limits=c(1995, 2008, by=1))+
   theme(plot.title = element_text(hjust = 0.5))
+ggsave("Number of Ratings over Years of Rating.png")
 
-
-rm(p_1, p_2,test_index)
+#rm(p_1, p_2,test_index)
   
 #Drama remained a popular choice over years by receiving the most number of ratings from 3.5 and above. 
 # Due to limits of memory only top 10 of genres with highest number of ratings will be represented
@@ -243,7 +245,7 @@ edx_genre%>%group_by(genres)%>%
   ggtitle("Error Bar by Genre") +
   labs(x="Genre" , y="Average Rating") +
   theme(plot.title = element_text(hjust = 0.5))
-
+ggsave("Error Bar by Genre.png")
 ###########
 # TIME   #
 ##########
@@ -257,6 +259,7 @@ edx %>% group_by(rating_year) %>%summarize(avg_rating = mean(rating)) %>%
   ggtitle("Average Rating over Rating Year") +
   labs(x="Rating Year" , y="Average Rating") +
   theme(plot.title = element_text(hjust = 0.5))
+ggsave("Average Rating over Rating Year.png")
 
 # Highest number of given ratings 
 edx%>%group_by(rating, rating_year)%>%
@@ -281,8 +284,9 @@ p_4<- edx%>%group_by(rating_year)%>%
   ggtitle("Average Rating over Rating Years with Error Bar") +
   labs(x="Rating Year" , y="Average Rating") +
   theme(plot.title = element_text(hjust = 0.5))
-gridExtra::grid.arrange(p_3, p_4, nrow = 1)
-
+pl<-gridExtra::grid.arrange(p_3, p_4, nrow = 1)
+ggsave("Average rating over release vs. rating years.png", pl)
+ 
 # Average rating over the age of movies
 edx%>%group_by(age_years) %>% summarize(avg_rating = mean(rating))%>%arrange(desc(avg_rating))%>%
   ggplot(aes(age_years, avg_rating)) +
@@ -291,6 +295,8 @@ edx%>%group_by(age_years) %>% summarize(avg_rating = mean(rating))%>%arrange(des
   ggtitle("Average Rating over Movie Age") +
   labs(x="Age of Movie" , y="Average Rating") +
   theme(plot.title = element_text(hjust = 0.5))
+ggsave("Average Rating over Movie Age.png")
+
 #The average rating went up with time past the release but dropped again for movies older then 70 years
 #############
 # Method    #
@@ -431,7 +437,7 @@ genre_ef<-train_set_g%>%
 age_ef<-train_set_g%>%
   group_by(age_years)%>%
   left_join(movie_ef, by="movieId")%>%
-  left_join(user_ef, by="userId")%>%
+  left_join(user_ef,  by="userId")%>%
   left_join(genre_ef, by="genres") %>%
   summarize(b_a = mean(rating - mu - b_m- b_u - b_g))
 #Estimate predicted ratings

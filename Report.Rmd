@@ -117,6 +117,11 @@ Frequency
 plot(pressure)
 ```
 
+```{r, out.width='25%', fig.align='center', fig.cap='...'}
+knitr::include_graphics('images/name.png')
+```
+
+
 
 ## Method Section
 
