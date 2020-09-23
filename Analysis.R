@@ -1,13 +1,13 @@
-#######################################
-# PROJECT I: Movie Recommendation 
-######################################
-# IMPORTANT: Make sure NOT to use the validation set (the final hold-out test set) to train the algorithm. 
-# The validation set (the final hold-out test set) should ONLY be used to test the final algorithm. 
-# Split the edx data into a training and test set or use cross-validation.
+# # # # # # # # # # # # # # # # # # # # # # # # 
+#  PROJECT I: Movie Recommendation            #
+# # # # # # # # # # # # # # # # # # # # # # # # 
+
 setwd("MovieLens")
-##################
-# Load libraries
-#################
+
+# # # # # # # # # # # # 
+#  Load libraries
+# # # # # # # # # # # # 
+
 library(dslabs)
 library(tidyverse)
 library(caret)
@@ -15,25 +15,16 @@ library(dplyr)
 library(lubridate)
 library(ggplot2)
 library(gridExtra)
-#################################
-# Create edx and validation set
-#################################
 
-# Code to generate edx data set
+# # # # # # # # # # # # 
+#  Create edx data 
+# # # # # # # # # # # #
+
+#  Code to generate edx data set
 if(!require(tidyverse)) install.packages("tidyverse", repos = "http://cran.us.r-project.org")
 if(!require(caret)) install.packages("caret", repos = "http://cran.us.r-project.org")
 if(!require(data.table)) install.packages("data.table", repos = "http://cran.us.r-project.org")
 
-# MovieLens 10M dataset:
-# https://grouplens.org/datasets/movielens/10m/
-# http://files.grouplens.org/datasets/movielens/ml-10m.zip
-
-#dl <- tempfile()
-#download.file("http://files.grouplens.org/datasets/movielens/ml-10m.zip", dl)
-
-#ratings <- fread(text = gsub("::", "\t", readLines(unzip(dl, "ml-10M100K/ratings.dat"))),
-#                 col.names = c("userId", "movieId", "rating", "timestamp"))
-#movies <- str_split_fixed(readLines(unzip(dl, "ml-10M100K/movies.dat")), "\\::", 3)
 
 ratings <- fread(text = gsub("::", "\t", readLines("ml-10M100K/ratings.dat")),
                  col.names = c("userId", "movieId", "rating", "timestamp"))
@@ -44,109 +35,101 @@ movies <- as.data.frame(movies, stringsAsFactors=TRUE) %>% mutate(movieId = as.n
                                                                   genres = as.character(genres))
 movielens <- left_join(ratings, movies, by = "movieId")
 
-#################################################
-# Validation set will be 10% of MovieLens data  #
-#################################################
+# # # # # # # # # # # # # # # # # # # # # # 
+#  Validation set will be 10% of edx data   
+# # # # # # # # # # # # # # # # # # # # # # 
 
-# Code to generate the validation set
+#  Code to generate the validation set
 set.seed(675)
 test_index <- createDataPartition(y = movielens$rating, times = 1, p = 0.1, list = FALSE)
 edx <- movielens[-test_index,]
 temp <- movielens[test_index,]
 
-# Make sure userId and movieId in validation set are also in edx set
+#  Make sure userId and movieId in validation set are also in edx set
 validation <- temp %>% 
   semi_join(edx, by = "movieId") %>%
   semi_join(edx, by = "userId")
 
-# Add rows removed from validation set back into edx set
+#  Add rows removed from validation set back into edx set
 removed <- anti_join(temp, validation)
 edx <- rbind(edx, removed)
 
 rm(ratings, movies, test_index, temp, movielens, removed)
 
-# REMOVE ME LATER
+# # # # # # # # # # # # # # # # # 
+#   edx Data processing         # 
+# # # # # # # # # # # # # # # # # 
 
-#edx <- edx[1:100000,]
-
-############################
-#  edx Data processing     #
-############################
-
-# edx summary
+#  edx summary
 summary(edx)
 
-# Number of variables
+#  Number of variables
 ncol(edx)
 
-# Number of observarions
+#  Number of observarions
 nrow(edx)
 
-# Sort data by movieId 
-edx<-arrange(edx, by=movieId)
-
-# Split title and year into separate columns
+#  Split title and year into separate columns by using regex
 edx<-extract(edx, title, c("title", "release_year"), "(.*)\\((\\d{4})\\)$")
 
-# Convert year character into to an integer
+#  Convert year character into to an integer
 edx<-transform(edx, release_year = as.numeric(release_year))
 
-# Transform the rating timestamp to datetime year
+#  Transform the rating timestamp to datetime year
 edx<-transform(edx, rating_year = year(as_datetime(timestamp))) 
 
-# Create an age_years variable that represents time in years
-# between release time ant time when rating was given
+#  Create an age_years variable that represents time in years
+#  between release time and time when rating was given
 edx<-edx%>%mutate(age_years=as.numeric(rating_year)-as.numeric(release_year))%>%filter(age_years>=0)
   
-# Split genres into single columns per genre, rename in edx_genre
+#  Split genres into single columns per genre, rename in edx_genre
 edx_genre<-separate_rows(edx, genres, sep = "\\|")
 
-# Check missing values
+#  Check missing values
 sum(is.na(edx))
 
 head(edx,10)
 
-##################################
-# Validation Data processing 
-#################################
-#validation <-validation[1:10000,]
+# # # # # # # # # # # # # # # # # # 
+#  Validation Data processing     #
+# # # # # # # # # # # # # # # # # #
 
-# Split title and year into separate columns
+#  Split title and year into separate columns by using regex
 validation<-extract(validation, title, c("title", "release_year"), "(.*)\\((\\d{4})\\)$")
 
-# Convert year character into to an integer
+#  Convert year character into to an integer
 validation<-transform(validation, release_year = as.numeric(release_year))
 
-# Transform the rating timestamp to datetime year
+#  Transform the rating timestamp to datetime year
 validation<-transform(validation, rating_year = year(as_datetime(timestamp)))
 
-# Create an age_years variable that represents time in years
-# between release time ant time when rating was given
+#  Create an age_years variable that represents time in years
+#  between release time and time when rating was given
 validation<-validation%>%mutate(age_years=as.numeric(rating_year)-as.numeric(release_year))%>%filter(age_years>=0)
 
-#Split genres into single columns per genre, rename in validation_genre
+# Split genres into single columns per genre, rename in validation_genre
 validation_genre<-separate_rows(validation, genres, sep = "\\|")
 
-##############################################
-#   Visualization and Descriptive statistics #
-#############################################
+# # # # # # # # # # # # # # # # # # # # # # # # # # 
+#    Visualization and Descriptive statistics     # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-#######################
-# USERS and MOVIES    #
-#######################
+# # # # # # # # # # # # # # 
+#  USERS and MOVIES       # 
+# # # # # # # # # # # # # # 
 
-# Top 10 of movies with greatest number of ratings
+#  Top 10 of movies with greatest number of ratings
 edx%>%group_by(movieId, title)%>%
   summarise(count = n())%>%arrange(desc(count))%>%
   top_n(10, count)
 
-# Number of unique users, movies and movie titles in edx
+#  Number of unique users, movies and movie titles in edx
 edx %>%summarize(n_users  = n_distinct(userId),
                  n_movies = n_distinct(movieId),
                  n_title  = n_distinct(title))
 
-# Distribution of number of ratings among Users and Movies.
-#Change the format from scientific to numerical
+#  Distribution of number of ratings among Users and Movies.
+# Change the format from scientific to numerical
 options(scipen = 999)
 p_1<-edx %>% 
   count(movieId) %>% 
@@ -154,7 +137,7 @@ p_1<-edx %>%
   geom_histogram(bins=30, fill=I("blue"), col=I("red"), alpha=.2) +
   scale_x_continuous(trans = "log10") + 
   geom_density(col = "black", lwd=0.2)+
-  #ggtitle("Number of Movies vs. Proportion of Ratingscount") +
+  # ggtitle("Number of Movies vs. Proportion of Ratingscount") +
   labs(x="n Movies", y="Proportions of n Ratings")+
   theme(plot.title = element_text(hjust = 0.5))
 
@@ -164,49 +147,50 @@ p_2<-edx %>%
   geom_histogram(bins=30, fill=I("grey"), col=I("red"), alpha=.2) +
   scale_x_continuous(trans = "log10") + 
   geom_density(col = "black", lwd=0.2)+
-  #ggtitle("Number of Users vs Proportion of Ratingscount") +
+  # ggtitle("Number of Users vs Proportion of Ratingscount") +
   labs(x="n Users" , y="Proportion of n Ratings") +
   theme(plot.title = element_text(hjust = 0.5))
 
 p<-grid.arrange(p_1, p_2, nrow = 1)
 
-# Save p_1 and p_2 in one image
+#  Save p_1 and p_2 in one image
 ggsave("n_ratings_Users_Movies.png", p)
-############################
-# Distribution of Ratings  #
-###########################
 
-# Top 10 most given ratings 
+# # # # # # # # # # # # # # # # # # # 
+#  Distribution of Ratings               
+# # # # # # # # # # # # # # # # # # # 
+
+#  Top 10 most given ratings 
 edx%>%group_by(rating)%>%
   summarize(count = n()) %>%
   arrange(desc(count))
 
-# Number of ratings given each rating categories from 0.5 to 5 stars
+#  Number of ratings given each rating categories from 0.5 to 5 stars
 edx %>% ggplot(aes(rating)) + geom_bar(fill=I("blue"), col=I("grey"), alpha=.2)+
   scale_x_continuous(breaks=seq(0, 5, by= 0.5))+
   ggtitle("Number of Ratings") +
   labs(x="Ratings", y="n of Ratings")+
   theme(plot.title = element_text(hjust = 0.5))
 ggsave("Number of Ratings.png")
-# As we can see 3 and 4 are the most given ratings   
+#  As we can see 3 and 4 are the most given ratings   
 
-##########
-# GENRE  #
-##########
+# # # # # # # # # # 
+#  GENRE          # 
+# # # # # # # # # # 
 
-# Number of movies in different genres
+#  Number of movies in different genres
 edx_genre%>%group_by(genres) %>%
   summarize(count = n())%>% top_n(10)%>%arrange(desc(count))
 
-# Number of different genres
+#  Number of different genres
 edx_genre%>%summarize(genre = n_distinct(genres))
 
-# Number of ratings for each genre
+#  Number of ratings for each genre
 edx_genre%>%group_by(genres, rating)%>%
   summarize(count = n()) %>%
   arrange(desc(count))
 
-# Number of ratings for each genre
+#  Number of ratings for each genre
 edx_genre %>% group_by(genres) %>% 
   summarize(count=n())%>%
   ggplot(aes(x= reorder(genres, count), y=count))+
@@ -217,11 +201,11 @@ edx_genre %>% group_by(genres) %>%
   geom_text(aes(label= count), hjust=-0.1, size=3) +
   theme(plot.title = element_text(hjust = 0.5))
 ggsave("Number of Ratings for each Genre.png")
-# Drama, Comedy and Action genre received the most ratings 
+#  Drama, Comedy and Action genre received the most ratings 
 
-# Number of ratings over years when rating was given for each genre
+#  Number of ratings over years when rating was given for each genre
 
-# Change format from scientific to normal
+#  Change format from scientific to normal
 options(scipen = 999)
 edx_genre%>%na.omit() %>% filter(rating>4)%>% mutate(genres = as.factor(genres))%>%
   group_by(genres,rating_year)%>%
@@ -235,23 +219,27 @@ edx_genre%>%na.omit() %>% filter(rating>4)%>% mutate(genres = as.factor(genres))
   theme(plot.title = element_text(hjust = 0.5))
 ggsave("Number of Ratings over Years of Rating.png")
 
-# Drama remained a popular choice over years by receiving the most number of ratings from 3.5 and above. 
-# Due to limits of memory only top 10 of genres with highest number of ratings will be represented
-# Boxplot of ratings for each genre
-edx_genre%>%group_by(genres)%>%
-  filter(genres  %in% c("Drama”, “Comedy", "Action", "Thriller", "Adventure"))%>%
-  mutate(count=n(), avg_rating=mean(rating), se_rating=sd(rating)/sqrt(count))%>%
-  ggplot(aes(x=reorder(genres, avg_rating), y=avg_rating, ymin = avg_rating-2*se_rating, ymax = avg_rating+2*se_rating), width=0.1, size=1.3 )+
-  geom_point()+geom_errorbar()+
-  ggtitle("Error Bar by Genre") +
-  labs(x="Genre" , y="Average Rating") +
-  theme(plot.title = element_text(hjust = 0.5))
-ggsave("Error Bar by Genre.png")
+#  Drama remained a popular choice over years by receiving the most number of ratings from 3.5 and above. 
+#  Due to limits of memory only top 10 of genres with highest number of ratings will be represented
+#  Boxplot of ratings for each genre
 
-###########
-# TIME    #
-###########
-# Average rating over years when rating was given
+edx_genre%>%filter(genres  %in% c("Drama”, “Comedy", "Action", "Thriller", "Adventure", "Romance", "Sci-Fi", "Crime", "Fantasy", 
+                                  "Children", "Horror", "Mystery", "War", "Animation", "Musical", "Western", "Film-Noir", "Documentary", "IMAX" ))%>%
+  mutate(count = n(), avg_rating = mean(rating), se_rating = sd(rating)/sqrt(count))%>%
+  ggplot(aes(x = reorder(genres, rating), y = rating))+
+  geom_boxplot()+
+  ggtitle("Boxplot by Genre") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  xlab(" ")+
+  ylab("Rating")+
+  theme(plot.title = element_text(hjust = 0.5))
+ggsave("Boxplot by Genre.png")
+
+# # # # # # # # # # # 
+#  TIME             # 
+# # # # # # # # # # # 
+
+#  Average rating over years when rating was given
 edx %>% group_by(rating_year) %>%summarize(avg_rating = mean(rating)) %>%
   ggplot(aes(rating_year, avg_rating)) +
   geom_point() + geom_smooth()+
@@ -262,13 +250,13 @@ edx %>% group_by(rating_year) %>%summarize(avg_rating = mean(rating)) %>%
   theme(plot.title = element_text(hjust = 0.5))
 ggsave("Average Rating over Rating Year.png")
 
-# Highest number of given ratings for each year
+#  Highest number of given ratings for each year
 edx%>%group_by(rating, rating_year)%>%
   summarise(n=n(), max=max(n))%>%
   arrange(desc(max))
 
-# In more detail to compare release with rating year:
-# Average rating over release vs. rating years
+#  In more detail to compare release with rating year:
+#  Average rating over release vs. rating years
 p_3<-edx%>%group_by(release_year)%>%
   mutate(count=n(), avg_rating=mean(rating), se_rating=sd(rating)/sqrt(count))%>%
   ggplot(aes(release_year, avg_rating, ymin=avg_rating-2*se_rating, ymax=avg_rating+2*se_rating),width=0.1, size=1.3 )+
@@ -281,14 +269,14 @@ p_4<- edx%>%group_by(rating_year)%>%
   mutate(count=n(), avg_rating=mean(rating), se_rating=sd(rating)/sqrt(count))%>%
   ggplot(aes(rating_year, avg_rating, ymin=avg_rating-2*se_rating, ymax=avg_rating+2*se_rating), width=0.1, size=1.3 )+
   geom_line()+geom_point()+geom_errorbar()+
-  #scale_x_continuous(breaks=seq(1930, 2018, by= 1))+
+  # scale_x_continuous(breaks=seq(1930, 2018, by= 1))+
   ggtitle("Average Rating over Rating Years with Error Bar") +
   labs(x="Rating Year" , y="Average Rating") +
   theme(plot.title = element_text(hjust = 0.5))
 pl<-grid.arrange(p_3, p_4, nrow = 1)
 ggsave("Average rating over release vs. rating years.png", pl)
  
-# Average rating over the age of movies
+#  Average rating over the age of movies
 edx%>%group_by(age_years) %>% summarize(avg_rating = mean(rating))%>%arrange(desc(avg_rating))%>%
   ggplot(aes(age_years, avg_rating)) +
   scale_x_continuous(breaks=seq(0, 100, by= 10))+
@@ -298,83 +286,84 @@ edx%>%group_by(age_years) %>% summarize(avg_rating = mean(rating))%>%arrange(des
   theme(plot.title = element_text(hjust = 0.5))
 ggsave("Average Rating over Movie Age.png")
 
-#The average rating went up with time past the release but dropped again for movies older then 70 years
-#############
-# Method    #
-#############
+# The average rating went up with time past the release but dropped again for movies older then 70 years
 
-#####################################################
-# Generate training and test sets, 20% of edx data
-#####################################################
+# # # # # # # #  
+#  Method     # 
+# # # # # # # #
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+#  Generate train and test sets, 20% of edx data
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 set.seed(110)
 test_index <- createDataPartition(y=edx$rating, times = 1, p = 0.2, list = FALSE)
 test_set <- edx[test_index, ]
 train_set <- edx[-test_index, ]  
 
-# To make sure we don’t include users and movies in the test set that do not appear in the training set, 
-# remove these entries using the semi_join function:
+#  To make sure we don’t include users and movies in the test set that do not appear in the training set, 
+#  remove these entries using the semi_join function:
 test_set <- test_set %>% 
 semi_join(train_set, by = "movieId") %>%
 semi_join(train_set, by = "userId")
 
-# For the evaluation of the model RMSE function will be used
+# RMSE FUNCTION: For the evaluation of the model RMSE function will be used
 RMSE <- function(true_ratings, predicted_ratings){
   sqrt(mean((true_ratings-predicted_ratings)^2, na.rm = T))
 }
 
-##################################
-# (M1) Model with movie effects
-##################################
+# # # # # # # # # # # # # # # # # # # # 
+#  (M1) Model with movie effects
+# # # # # # # # # # # # # # # # # # # # 
 
-# least squares estimate b_m is just the average of Yu,i − μˆ for each movie i.
-#Average rating 
+#  least squares estimate b_m is just the average of Yu,i − μˆ for each movie i.
+# Average rating 
 mu <- mean(train_set$rating)
 
-#Estimate movie effect b_m
+# Estimate movie effect b_m
 movie_ef <- train_set %>%
   group_by(movieId) %>%
   summarize(b_m = mean(rating - mu))
 
-# Estimate predicted ratings
+#  Estimate predicted ratings
 predicted_ratings <- test_set %>%
   left_join(movie_ef, by='movieId') %>%
   mutate(pred = mu + b_m) %>%
   pull(pred)
 
-# Calculate RMSE of Model 1
+#  Calculate RMSE of Model 1
 rmes_1<-RMSE(predicted_ratings, test_set$rating)
 
 rmse_results <- data_frame(Model = "(M1) Movie Effect", RMSE = rmes_1)
 rmse_results%>% knitr::kable()
 
-##########################################
-# (M2) Model with movie and user effect
-#########################################
+# # # # # # # # # # # # # # # # # # # # # # # 
+#  (M2) Model with movie and user effect
+# # # # # # # # # # # # # # # # # # # # # # # 
 
-# Yu,i = μ+bi +bu +εu,i, compute an approximation by computing μˆ 
-# and b_m and estimating b_u as the average of yu,i − μˆ − bi
+#  Yu,i = μ+bi +bu +εu,i, compute an approximation by computing μˆ 
+#  and b_m and estimating b_u as the average of yu,i − μˆ − bi
 
-#Average rating
+# Average rating
 mu <- mean(train_set$rating)
 
-#Estimate movie effect b_m
+# Estimate movie effect b_m
 movie_ef <- train_set %>%
   group_by(movieId) %>%
   summarize(b_m = mean(rating - mu))
-#Estimate user effect b_u
+# Estimate user effect b_u
 user_ef <- train_set %>%
   left_join(movie_ef, by='movieId') %>%
   group_by(userId) %>%
   summarize(b_u = mean(rating - mu - b_m))
-#Estimate predicted rating
+# Estimate predicted rating
 predicted_ratings <- test_set %>%
   left_join(movie_ef, by='movieId') %>%
   left_join(user_ef,  by='userId') %>%
   mutate(pred = mu + b_m + b_u) %>%
   pull(pred)
 
-#Calculate RMSE of Model 2
+# Calculate RMSE of Model 2
 rmse_2<-RMSE(predicted_ratings, test_set$rating)
 
 rmse_results <- bind_rows(rmse_results,
@@ -382,36 +371,38 @@ rmse_results <- bind_rows(rmse_results,
                                      RMSE = rmse_2))
 
 rmse_results%>% knitr::kable()
-################################################
-# (M3) Model with movie, user and genre effect
-################################################
 
-# Yu,i = μ+bi +bu +εu,i, compute an approximation by computing μˆ 
-# and b_m and estimating b_u as the average of yu,i − μˆ − bi
+# # # # # # # # # # # # # # # # # # # # # # # # # # 
+#  (M3) Model with movie, user and genre effect
+# # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-# Before adding the genre effect split genres into single columns per genre
+#  Yu,i = μ+bi +bu +εu,i, compute an approximation by computing μˆ 
+#  and b_m and estimating b_u as the average of yu,i − μˆ − bi
+
+#  Before adding the genre effect split genres train_set & test_set 
+#  into single columns per genre and save as train_set_g, test_set_g
 train_set_g<-separate_rows(train_set, genres, sep = "\\|")
 test_set_g<-separate_rows(test_set, genres, sep = "\\|")
 
-#Average rating
+#  Average rating
 mu <- mean(train_set_g$rating)
-#Estimate movie effect b_m
+#  Estimate movie effect b_m
 movie_ef <- train_set_g %>%
   group_by(movieId) %>%
   summarize(b_m = mean(rating - mu))%>%ungroup()
-#Estimate user effect b_u
+#  Estimate user effect b_u
 user_ef <- train_set_g %>%
   left_join(movie_ef, by='movieId') %>%
   group_by(userId) %>%
   summarize(b_u = mean(rating - mu - b_m)) 
-#Estimate genre effect b_g
+#  Estimate genre effect b_g
 genre_ef<-train_set_g%>%
   left_join(movie_ef, by="movieId")%>%
   left_join(user_ef, by="userId")%>%
   group_by(genres)%>%
   summarize(b_g = mean(rating - mu - b_m- b_u)) 
 
-#Estimate predicted ratings
+#  Estimate predicted ratings
 predicted_ratings <- test_set_g %>%
   left_join(movie_ef, by='movieId') %>%
   left_join(user_ef,  by='userId') %>%
@@ -419,7 +410,7 @@ predicted_ratings <- test_set_g %>%
   mutate(pred = mu + b_m + b_u + b_g) %>%
   pull(pred)
 
-#Calculate RMSE of Model 3
+#  Calculate RMSE of Model 3
 rmse_3<-RMSE(predicted_ratings, test_set_g$rating)
 
 rmse_results <- bind_rows(rmse_results,
@@ -427,37 +418,37 @@ rmse_results <- bind_rows(rmse_results,
                                      RMSE = rmse_3))
 rmse_results%>% knitr::kable()
 
-#####################################################
-# (M4) Model with movie, user, genre and age effect
-#####################################################
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+#  (M4) Model with movie, user, genre and age effect
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-# Yu,i = μ+bi +bu +εu,i, compute an approximation by computing μˆ 
-# and b_m and estimating b_u as the average of yu,i − μˆ − bi
-# Average rating
+#  Yu,i = μ+bi +bu +εu,i, compute an approximation by computing μˆ 
+#  and b_m and estimating b_u as the average of yu,i − μˆ − bi
+#  Average rating
 mu <- mean(train_set_g$rating)
-#Estimate movie effect b_m
+# Estimate movie effect b_m
 movie_ef <- train_set_g %>%
   group_by(movieId) %>%
   summarize(b_m = mean(rating - mu))
-#Estimate user effect b_u
+#  Estimate user effect b_u
 user_ef <- train_set_g %>%
   left_join(movie_ef, by='movieId') %>%
   group_by(userId) %>%
   summarize(b_u = mean(rating - mu - b_m))
-#Estimate genre effect b_g
+#  Estimate genre effect b_g
 genre_ef<-train_set_g%>%
  left_join(movie_ef, by="movieId")%>%
  left_join(user_ef, by="userId")%>%
  group_by(genres)%>%
  summarize(b_g = mean(rating - mu - b_m- b_u))
-#Estimate age effect b_a
+#  Estimate age effect b_a
 age_ef<-train_set_g%>%
   left_join(movie_ef, by="movieId")%>%
   left_join(user_ef,  by="userId")%>%
   left_join(genre_ef, by="genres") %>%
   group_by(age_years)%>%
   summarize(b_a = mean(rating - mu - b_m - b_u - b_g))
-#Estimate predicted ratings
+# Estimate predicted ratings
 predicted_ratings <- test_set_g %>%
   left_join(movie_ef, by='movieId') %>%
   left_join(user_ef,  by='userId') %>%
@@ -475,15 +466,15 @@ rmse_results <- bind_rows(rmse_results,
 rmse_results%>% knitr::kable()
 
 
-###########################################################
-# Regularization Method with lambda as a tuning parameter #
-###########################################################
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+#  Regularization Method with lambda as a tuning parameter  # 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-###########################################################
-# (M5) Model with the regularized movie effect with lambda
-###########################################################
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+#  (M5) Model with the regularized movie effect with lambda
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-# Choosing the tuning parameter lambda 
+#  Choosing the tuning parameter lambda 
 lambda <- seq(0, 15, 0.50)
 
 rmses_m_ef_reg <- sapply(lambda, function(l){
@@ -504,32 +495,33 @@ rmses_m_ef_reg<-return(RMSE(predicted_ratings, test_set$rating))
 qplot(lambda, rmses_m_ef_reg)
 ggsave("lambda 1.png")
 
-# Choose tuning parameter l with minimal RMSE
+#  Choose tuning parameter l with minimal RMSE
 l_1<-lambda[which.min(rmses_m_ef_reg)]
 l_1
-#Average rating  
+# Average rating  
 mu <- mean(train_set$rating)
-#Estimate movie effect b_m
+# Estimate movie effect b_m
 movie_ef_reg <- train_set %>%
   group_by(movieId) %>%
   summarize(b_m = sum(rating - mu)/(n()+l_1), n_m = n())
-#Estimate predicted ratings
+# Estimate predicted ratings
 predicted_ratings <- test_set %>%
   left_join(movie_ef_reg, by = "movieId") %>%
   mutate(pred = mu + b_m) %>%
   pull(pred)
-#Calculate RMSE of Model 5
+# Calculate RMSE of Model 5
 rmse_5<-RMSE(predicted_ratings, test_set$rating)
 rmse_results <- bind_rows(rmse_results,
                           data_frame(Model="(M5) Regularized Movie Effect Model",
                                      RMSE = rmse_5))
 
 rmse_results%>% knitr::kable()
-##############################################################################################
-# (M6) Model with the regularized regularized movie + user effect with tuning parameter lambda
-##############################################################################################
 
-# Choose tuning parameter lambda by using cross-validation
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #  
+#  (M6) Model with the regularized regularized movie + user effect with tuning parameter lambda
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+#  Choose tuning parameter lambda
 lambda <- seq(0, 15, 0.50)
 
 rmses_mu_ef_reg <- sapply(lambda, function(l){
@@ -556,28 +548,28 @@ rmses_mu_ef_reg<-return(RMSE(predicted_ratings, test_set$rating))
 qplot(lambda, rmses_mu_ef_reg)
 ggsave("lambda 2.png")
 
-# tuning parameter l_2 with minimal RMSE 
+#  tuning parameter l_2 with minimal RMSE 
 l_2<-lambda[which.min(rmses_mu_ef_reg)]
 l_2
-#Average rating
+# Average rating
 mu <- mean(train_set$rating)
-#Estimate movie effect b_m
+# Estimate movie effect b_m
 movie_ef_reg <- train_set %>%
   group_by(movieId) %>%
   summarize(b_m = sum(rating - mu)/(n()+l_2), n_m= n())
-#Estimate user effect b_u 
+# Estimate user effect b_u 
 user_ef_reg <- train_set %>%
   left_join(movie_ef_reg, by='movieId') %>% 
   group_by(userId) %>%
   summarize(b_u = sum(rating - b_m - mu)/(n() +l_2), n_u = n())
-# Estimate predicted ratings 
+#  Estimate predicted ratings 
 predicted_ratings <- test_set %>%
   left_join(movie_ef_reg, by = "movieId") %>%
   left_join(user_ef_reg, by = "userId") %>%
   mutate(pred = mu + b_m + b_u) %>%
   pull(pred)
 
-#Calculate RMSE of Model 6
+# Calculate RMSE of Model 6
 rmse_6<-RMSE(predicted_ratings, test_set$rating)
 rmse_results <- bind_rows(rmse_results,
                           data_frame(Model="(M6) Regularized Movie and User Effect Model",
@@ -585,10 +577,11 @@ rmse_results <- bind_rows(rmse_results,
 
 rmse_results%>% knitr::kable()
 
-############################################################################################
-# (M7) Model with the regularized movie + user + genre effect with tuning parameter lambda
-############################################################################################
-# Choose tuning parameter lambda 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+#  (M7) Model with the regularized movie + user + genre effect with tuning parameter lambda
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+#  Choose tuning parameter lambda 
 lambda <- seq(0, 15, 0.50)
 
 rmses_mug_ef_reg <- sapply(lambda, function(l){
@@ -622,27 +615,27 @@ rmses_mug_ef_reg<-return(RMSE(predicted_ratings, test_set_g$rating))
 qplot(lambda, rmses_mug_ef_reg)
 ggsave("lambda 3.png")
   
-# tuning parameter l_3 with minimal RMSE 
+#  tuning parameter l_3 with minimal RMSE 
 l_3<-lambda[which.min(rmses_mug_ef_reg)]
 l_3
-# Average rating
+#  Average rating
 mu <- mean(train_set_g$rating)
-#Estimate movie effect b_m
+# Estimate movie effect b_m
 movie_ef_reg <- train_set_g %>%
   group_by(movieId) %>%
   summarize(b_m = sum(rating - mu)/(n()+l_3), n_m= n())
-#Estimate user effect b_u
+# Estimate user effect b_u
 user_ef_reg <- train_set_g %>%
   left_join(movie_ef_reg, by='movieId') %>% 
   group_by(userId) %>%
   summarize(b_u = sum(rating - b_m - mu)/(n() +l_3), n_u = n())
-# Estimate genre effect b_g
+#  Estimate genre effect b_g
 genre_ef_reg <- train_set_g %>%
   left_join(movie_ef_reg, by="movieId") %>%
   left_join(user_ef_reg, by="userId") %>%
   group_by(genres)%>%
   summarize(b_g = sum(rating - b_m - b_u - mu)/(n()+l_3), n_g = n())
-# Estimate predicted ratings 
+#  Estimate predicted ratings 
 predicted_ratings <- test_set_g %>%
   left_join(movie_ef_reg, by = "movieId") %>%
   left_join(user_ef_reg, by = "userId") %>%
@@ -650,7 +643,7 @@ predicted_ratings <- test_set_g %>%
   mutate(pred = mu + b_m + b_u + b_g) %>%
   pull(pred)
 
-#Calculate RMSE of Model 7
+# Calculate RMSE of Model 7
 rmse_7<-RMSE(predicted_ratings, test_set_g$rating)
 rmse_results <- bind_rows(rmse_results,
                           data_frame(Model="(M7) Regularized Movie, User and Genre Effect Model",
@@ -658,11 +651,11 @@ rmse_results <- bind_rows(rmse_results,
 
 rmse_results%>% knitr::kable()
 
-#################################################################################################
-# (M8) Model with the regularized movie + user + genre + age effect with tuning parameter lambda
-#################################################################################################
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+#  (M8) Model with the regularized movie + user + genre + age effect with tuning parameter lambda
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-# Choose tuning parameter lambda by using cross-validation
+#  Choose tuning parameter lambda 
 lambda <- seq(0, 15, 0.50)
 
 rmses_muga_ef_reg <- sapply(lambda, function(l){
@@ -705,34 +698,34 @@ rmses_muga_ef_reg <- sapply(lambda, function(l){
 qplot(lambda, rmses_muga_ef_reg)
 ggsave("lambda 4.png")
 
-# tuning parameter l with minimal RMSE 
+#  tuning parameter l_4 with minimal RMSE 
 l_4<-lambda[which.min(rmses_muga_ef_reg)]
 l_4
-# Average rating
+#  Average rating
 mu <- mean(train_set_g$rating)
-#Estimate movie effect b_m
+# Estimate movie effect b_m
 movie_ef_reg <- train_set_g %>%
   group_by(movieId) %>%
   summarize(b_m = sum(rating - mu)/(n()+l_4), n_m= n())
-#Estimate user effect b_u
+# Estimate user effect b_u
 user_ef_reg <- train_set_g %>%
   left_join(movie_ef_reg, by='movieId') %>% 
   group_by(userId) %>%
   summarize(b_u = sum(rating - b_m - mu)/(n() +l_4), n_u = n())
-# Estimate genre effect b_g
+#  Estimate genre effect b_g
 genre_ef_reg <- train_set_g %>%
   left_join(movie_ef_reg, by = "movieId") %>%
   left_join(user_ef_reg,  by = "userId") %>%
   group_by(genres)%>%
   summarize(b_g = sum(rating - b_m - b_u - mu)/(n()+l_4), n_g = n())
-#Estimate age effect b_a
+# Estimate age effect b_a
 age_ef_reg <- train_set_g %>%
   left_join(movie_ef_reg, by = "movieId") %>%
   left_join(user_ef_reg,  by = "userId") %>%
   left_join(genre_ef_reg, by = "genres")%>%
   group_by(age_years)%>%
   summarize(b_a = sum(rating - b_g - b_m - b_u - mu)/(n()+l_4), n_a = n())
-# Estimate predicted ratings 
+#  Estimate predicted ratings 
 predicted_ratings <- test_set_g %>%
   left_join(movie_ef_reg, by = "movieId") %>%
   left_join(user_ef_reg,  by = "userId") %>%
@@ -741,7 +734,7 @@ predicted_ratings <- test_set_g %>%
   mutate(pred = mu + b_m + b_u + b_g + b_a) %>%
   pull(pred)
 
-#Calculate RMSE of Model 8
+# Calculate RMSE of Model 8
 rmse_8<-RMSE(predicted_ratings, test_set_g$rating)
 rmse_results <- bind_rows(rmse_results,
                           data_frame(Model="(M8) Regularized Movie, User, Genre and Age Effect Model",
@@ -749,38 +742,38 @@ rmse_results <- bind_rows(rmse_results,
 
 rmse_results%>% knitr::kable()
 
-###################################
-# Final Model
-###################################
+# # # # # # # # # # # 
+#  Final Model
+# # # # # # # # # # # 
 
-# tuning parameter l with minimal RMSE 
+#  tuning parameter l with minimal RMSE 
 l_4<-lambda[which.min(rmses_muga_ef_reg)]
 l_4
-# Average rating
+#  Average rating
 mu <- mean(edx_genre$rating)
-#Estimate movie effect b_m
+# Estimate movie effect b_m
 movie_ef_reg <- edx_genre %>%
   group_by(movieId) %>%
   summarize(b_m = sum(rating - mu)/(n()+l_4), n_m= n())
-#Estimate user effect b_u
+# Estimate user effect b_u
 user_ef_reg <- edx_genre %>%
   left_join(movie_ef_reg, by='movieId') %>% 
   group_by(userId) %>%
   summarize(b_u = sum(rating - b_m - mu)/(n() +l_4), n_u = n())
-# Estimate genre effect b_g
+#  Estimate genre effect b_g
 genre_ef_reg <- edx_genre %>%
   left_join(movie_ef_reg, by = "movieId") %>%
   left_join(user_ef_reg,  by = "userId") %>%
   group_by(genres)%>%
   summarize(b_g = sum(rating - b_m - b_u - mu)/(n()+l_4), n_g = n())
-#Estimate age effect b_a
+# Estimate age effect b_a
 age_ef_reg <- edx_genre %>%
   left_join(movie_ef_reg, by = "movieId") %>%
   left_join(user_ef_reg,  by = "userId") %>%
   left_join(genre_ef_reg, by = "genres")%>%
   group_by(age_years)%>%
   summarize(b_a = sum(rating - b_g - b_m - b_u - mu)/(n()+l_4), n_a = n())
-# Estimate predicted ratings 
+#  Estimate predicted ratings 
 predicted_ratings <- validation_genre %>%
   left_join(movie_ef_reg, by = "movieId") %>%
   left_join(user_ef_reg,  by = "userId") %>%
@@ -789,7 +782,7 @@ predicted_ratings <- validation_genre %>%
   mutate(pred = mu + b_m + b_u + b_g + b_a) %>%
   pull(pred)
 
-#Calculate RMSE of Model 8
+# Calculate RMSE of Final Model
 rmse_final<-RMSE(predicted_ratings, validation_genre$rating)
 rmse_results <- bind_rows(rmse_results,
                           tibble(Model="Final Regularized Movie, User, Genre and Age Effect Model",
