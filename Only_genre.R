@@ -123,7 +123,7 @@ edx %>%summarize(n_users  = n_distinct(userId),
                  n_movies = n_distinct(movieId),
                  n_title  = n_distinct(title))
 
-#  Distribution of number of ratings among Users and Movies.
+# Distribution of number of ratings among Users and Movies.
 # Change the format from scientific to numerical
 options(scipen = 999)
 p_1<-edx %>% 
@@ -200,7 +200,6 @@ edx_genre %>% group_by(genres) %>%
   geom_text(aes(label= count), hjust=-0.1, size=3) +
   theme(plot.title = element_text(hjust = 0.5))
 ggsave("Number of Ratings for each Genre.png")
-#  Drama, Comedy and Action genre received the most ratings 
 
 #  Number of ratings over years when rating was given for each genre
 
@@ -218,8 +217,6 @@ edx_genre%>%na.omit() %>% filter(rating>4)%>% mutate(genres = as.factor(genres))
   theme(plot.title = element_text(hjust = 0.5))
 ggsave("Number of Ratings over Years of Rating.png")
 
-#  Drama remained a popular choice over years by receiving the most number of ratings from 3.5 and above. 
-#  Due to limits of memory only top 10 of genres with highest number of ratings will be represented
 #  Boxplot of ratings for each genre
 
 edx_genre%>%filter(genres  %in% c("Drama”, “Comedy", "Action", "Thriller", "Adventure", "Romance", "Sci-Fi", "Crime", "Fantasy", 
@@ -253,10 +250,9 @@ ggsave("Average Rating over Rating Year.png")
 
 #  Highest number of given ratings for each year
 edx%>%group_by(rating, rating_year)%>%
-  summarise(n=n(), max=max(n))%>%
+  summarize(n=n(), max=max(n))%>%
   arrange(desc(max))
 
-#  In more detail to compare release with rating year:
 #  Average rating over release vs. rating years
 p_3<-edx%>%group_by(release_year)%>%
   mutate(count=n(), avg_rating=mean(rating), se_rating=sd(rating)/sqrt(count))%>%
@@ -286,8 +282,6 @@ edx%>%group_by(age_years) %>% summarize(avg_rating = mean(rating))%>%arrange(des
   labs(x="Age of Movie" , y="Average Rating") +
   theme(plot.title = element_text(hjust = 0.5))
 ggsave("Average Rating over Movie Age.png")
-
-# The average rating went up with time past the release but dropped again for movies older then 70 years
 
 # # # # # # # #  
 #  Method     # 

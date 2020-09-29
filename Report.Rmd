@@ -94,7 +94,7 @@ summary(edx)
 ```
 &nbsp;
 
-Before using the data for visualization and analysis several steps of data transformation were proceeded. The variable *title*" was split in 2 variables *title* and *release_year*. The variable *timestamp* was transformed to a year format and called *rating_year*. *age_years* was created as a difference between *release_year* and *rating_year*. The original *genres* variable represents a combination of several genres,for the purpose of data exploration this variable was split into 19 distinct genres and was only used to create plots. &nbsp;
+Before using the data for visualization and analysis several steps of data transformation were proceeded. The variable *title*" was split in 2 variables *title* and *release_year*. The variable *timestamp* was transformed to a year format and called *rating_year*. *age_years* was created as a difference between *release_year* and *rating_year*. The original *genres* variable represents a combination of several genres, for the purpose of data exploration this variable was split into 19 distinct genres and was only used to create plots. &nbsp;
 
 ```{r echo = FALSE}
 #  Split title and year into separate columns by using regex
@@ -229,7 +229,7 @@ edx_genre%>%na.omit() %>% filter(rating>4)%>% mutate(genres = as.factor(genres))
   summarise(count=n())%>%filter(count > 1000)%>%
   arrange(desc(count))%>%
   ggplot(aes(rating_year, count, color = genres))+
-  geom_line()+ geom_path() +
+  geom_line()+
   ggtitle("Number of Ratings over Years of Rating") +
   labs(x="Rating Years", y="n of Ratings") +
   scale_x_continuous(limits=c(1995, 2008, by=1))+
@@ -237,7 +237,8 @@ edx_genre%>%na.omit() %>% filter(rating>4)%>% mutate(genres = as.factor(genres))
 ```
 &nbsp;
 
-Following Box plots show how the ratings for each genre are spread in **edx**. For example "Film-Noir" shows the highest percentage on positive ratings although this genre received only few ratings compared to other genres. Similar to "Film-Noir", "Documentary" is a highly rated genre with not many ratings.
+Following Box plots show how the ratings for each genre are spread in **edx** data. For example "Film-Noir" shows the highest percentage on positive ratings although this genre received only few ratings compared to other genres. Similarly, "Documentary" is a highly rated genre with not many ratings.
+
 ```{r echo=FALSE}
 edx_genre%>%filter(genres  %in% c("Drama”, “Comedy", "Action", "Thriller", "Adventure", "Romance", "Sci-Fi", "Crime", "Fantasy", 
                                   "Children", "Horror", "Mystery", "War", "Animation", "Musical", "Western", "Film-Noir", "Documentary", "IMAX" ))%>%
@@ -250,10 +251,57 @@ edx_genre%>%filter(genres  %in% c("Drama”, “Comedy", "Action", "Thriller", "
   ylab("Rating")+
   theme(plot.title = element_text(hjust = 0.5))
   
-rm(edx_genre)
+
 ```
 
 ## - Time 
+
+There are 3 different variables defining time in the **edx** data set:  *rating_year*, *release_year* and *age_years*. Over the years the average rating remained over 3.0 ranging around rating 3.5.
+
+```{r echo=FALSE}
+#  Average rating over years when rating was given
+
+edx %>% group_by(rating_year) %>%summarize(avg_rating = mean(rating)) %>%
+  ggplot(aes(rating_year, avg_rating)) +
+  geom_point() + geom_smooth()+
+  scale_y_continuous(breaks=seq(0, 5, by= 0.5))+
+  scale_x_continuous(breaks=seq(1995, 2018, by= 5))+
+  ggtitle("Average Rating over Rating Year") +
+  labs(x="Rating Year" , y="Average Rating") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+In comparison between years when movie was first released with years when rating was given. Movies released long time ago don't contain enough data point and show higher variability. 
+
+```{r echo=FALSE}
+#  Average rating over release years
+edx%>%group_by(release_year)%>%
+  mutate(count=n(), avg_rating=mean(rating))%>%
+  ggplot(aes(release_year, avg_rating))+
+  geom_point()+geom_smooth()+
+  ggtitle("Average Rating over Release Years") +
+  labs(x="Release Year" , y="Average Rating") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+&nbsp;
+
+The average rating went up with time past the release date but dropped again for movies older than 70 years.
+```{r echo=FALSE}
+#  Average rating over the age of movies
+edx%>%group_by(age_years) %>% summarize(avg_rating = mean(rating))%>%arrange(desc(avg_rating))%>%
+  ggplot(aes(age_years, avg_rating)) +
+  scale_x_continuous(breaks=seq(0, 100, by= 10))+
+  geom_point() + geom_smooth()+
+  ggtitle("Average Rating over Movie Age") +
+  labs(x="Age of Movie" , y="Average Rating") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
+
 
 # Method Section
 
@@ -279,7 +327,7 @@ There were 7 possible predictors of rating: *genres*, *release_year*, *rating_ye
 The RMSE (residual mean squared error) is defined as:
 &nbsp;
 
-$RMSE = \sqrt{\frac{1}{N}\sum_{u,m}(\hat y_{u,m}-y_{u,m})^2}$ 
+$\begin{align}RMSE = \sqrt{\frac{1}{N}\sum_{u,m}(\hat y_{u,m}-y_{u,m})^2}\end{align}$ 
 &nbsp;
 
 Where $y_{u,i}$ is rating by user $u$ for movie $m$ and $\hat y_{u,m}$ is the prediction of the rating. $N$ is a number of movie and users.
