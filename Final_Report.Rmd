@@ -826,7 +826,7 @@ rmse_results%>% knitr::kable()
 
 Since the smallest **RMSE = 0.8648** was produced by (M8) Regularized Movie, User, Genre and Age Effects Model, this model was used on the **edx** data to train the algorithm, and on the **validation** data to test and to calculate the final RMSE.
 
-``` {r message=FALSE}
+``` {r echo=FALSE}
 # # # # # # # # # # # 
 #  Final Model
 # # # # # # # # # # # 
