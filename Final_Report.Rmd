@@ -128,13 +128,13 @@ There are 69878 unique users, 10677 movies and 10407 movie titles in the **edx**
 #  Number of unique users, movies and movie titles in edx
 edx %>%summarize(n_users  = n_distinct(userId),
                  n_movies = n_distinct(movieId),
-                 n_title  = n_distinct(title))
+                 n_title  = n_distinct(title), .groups = 'drop')
 ```
 
 ```{r warning=FALSE}
 #  Top 10 of movies with greatest number of ratings
 edx%>%group_by(movieId, title)%>%
-  summarise(count = n())%>%arrange(desc(count))%>%
+  summarise(count = n(), .groups = 'drop')%>%arrange(desc(count))%>%
   top_n(10, count)
 ```
 
@@ -185,15 +185,15 @@ edx_genre<-separate_rows(edx, genres, sep = "\\|")
 
 ```{r warning=FALSE}
 #  Number of different genres
-edx_genre%>%summarize(genre = n_distinct(genres))
+edx_genre%>%summarize(genre = n_distinct(genres), .groups = 'drop')
 ```
 
 The number of ratings for each genre shows that "Drama", "Comedy" and "Action" were top 3 genres that received the most ratings. "Film-Noir", "Documentaries" and "IMAX" received the least number of ratings.  
 
-```{r echo=FALSE}
+```{r echo=FALSE, warning=FALSE}
 #  Number of ratings for each genre
 edx_genre %>% group_by(genres) %>% 
-  summarize(count=n())%>%
+  summarize(count=n(), .groups = 'drop')%>%
   ggplot(aes(x= reorder(genres, count), y=count))+
   geom_bar(stat='identity', color="blue")+
   ggtitle("Number of Ratings for each Genre") +
@@ -207,12 +207,12 @@ edx_genre %>% group_by(genres) %>%
 "Drama" remained a popular choice over the years by receiving the most number of positive ratings of 4.0 and above. As shown in the plot below, "Drama" and "Comedy" received the highest number of rating 4.0 and above in year 2000, while "Documentary" remained flat over time.
 
 
-```{r echo=FALSE}
+```{r echo=FALSE, warning=FALSE}
 #  Change format from scientific to normal
 options(scipen = 999)
 edx_genre%>%na.omit() %>% filter(rating>4)%>% mutate(genres = as.factor(genres))%>%
   group_by(genres,rating_year)%>%
-  summarise(count=n())%>%filter(count > 1000)%>%
+  summarise(count=n(), .groups = 'drop')%>%filter(count > 1000)%>%
   arrange(desc(count))%>%
   ggplot(aes(rating_year, count, color = genres))+
   geom_line()+
@@ -224,7 +224,7 @@ edx_genre%>%na.omit() %>% filter(rating>4)%>% mutate(genres = as.factor(genres))
 
 The following box plots show how the ratings for each genre are spread in the **edx** data. For example, "Film-Noir" shows the highest percentage of positive ratings even though this genre received fewer ratings than other genres. Similarly, "Documentary" is a highly rated genre with not many ratings.
 
--```{r echo=FALSE}
+```{r echo=FALSE}
 edx_genre%>%filter(genres  %in% c("Drama”, “Comedy", "Action", "Thriller", "Adventure", "Romance", "Sci-Fi", "Crime", "Fantasy", 
                                   "Children", "Horror", "Mystery", "War", "Animation", "Musical", "Western", "Film-Noir", "Documentary", "IMAX" ))%>%
   mutate(count = n(), avg_rating = mean(rating), se_rating = sd(rating)/sqrt(count))%>%
@@ -237,7 +237,7 @@ edx_genre%>%filter(genres  %in% c("Drama”, “Comedy", "Action", "Thriller", "
   theme(plot.title = element_text(hjust = 0.5))
   
 
--```
+```
 
 
 ```{r echo=FALSE}
@@ -252,7 +252,7 @@ The following plot shows the average rating of movies over time. The average rat
 #  Average rating over years when rating was given
 
 edx %>% group_by(rating_year) %>%
-  summarize(avg_rating = mean(rating)) %>%
+  summarize(avg_rating = mean(rating), .groups = 'drop') %>%
   ggplot(aes(rating_year, avg_rating)) +
   geom_point() + geom_smooth()+
   scale_y_continuous(breaks=seq(0, 5, by= 0.5))+
@@ -267,7 +267,7 @@ Movies released longer ago don't contain enough data points and show higher vari
 ```{r echo=FALSE, warning= FALSE}
 #  Average rating over release years
 edx%>%group_by(release_year)%>%
-  summarize(avg_rating = mean(rating))%>%
+  summarize(avg_rating = mean(rating), .groups = 'drop')%>%
   ggplot(aes(release_year, avg_rating))+
   geom_point() + geom_smooth()+
   ggtitle("Average Rating over Release Years") +
@@ -278,9 +278,11 @@ edx%>%group_by(release_year)%>%
 
 The average rating of a movie increases over time until around 70 years. 
 
-```{r echo=FALSE, warning= FALSE}
+```{r echo=FALSE, warning=FALSE}
 #  Average rating over the age of movies
-edx%>%group_by(age_years) %>% summarize(avg_rating = mean(rating))%>%arrange(desc(avg_rating))%>%
+edx%>%group_by(age_years) %>%
+  summarize(avg_rating = mean(rating), .groups = 'drop')%>%
+  arrange(desc(avg_rating))%>%
   ggplot(aes(age_years, avg_rating)) +
   scale_x_continuous(breaks=seq(0, 100, by= 10))+
   geom_point() + geom_smooth()+
@@ -373,7 +375,7 @@ mu <- mean(train_set$rating)
 # Estimate movie effect b_m
 movie_ef <- train_set %>%
   group_by(movieId) %>%
-  summarize(b_m = mean(rating - mu))
+  summarize(b_m = mean(rating - mu), .groups = 'drop')
 
 #  Estimate predicted ratings
 predicted_ratings <- test_set %>%
@@ -400,12 +402,12 @@ mu <- mean(train_set$rating)
 # Estimate movie effect b_m
 movie_ef <- train_set %>%
   group_by(movieId) %>%
-  summarize(b_m = mean(rating - mu))
+  summarize(b_m = mean(rating - mu), .groups = 'drop')
 # Estimate user effect b_u
 user_ef <- train_set %>%
   left_join(movie_ef, by='movieId') %>%
   group_by(userId) %>%
-  summarize(b_u = mean(rating - mu - b_m))
+  summarize(b_u = mean(rating - mu - b_m), .groups = 'drop')
 # Estimate predicted rating
 predicted_ratings <- test_set %>%
   left_join(movie_ef, by='movieId') %>%
@@ -433,18 +435,18 @@ mu <- mean(train_set$rating)
 #  Estimate movie effect b_m
 movie_ef <- train_set %>%
   group_by(movieId) %>%
-  summarize(b_m = mean(rating - mu))%>%ungroup()
+  summarize(b_m = mean(rating - mu), .groups = 'drop')
 #  Estimate user effect b_u
 user_ef <- train_set %>%
   left_join(movie_ef, by='movieId') %>%
   group_by(userId) %>%
-  summarize(b_u = mean(rating - mu - b_m)) 
+  summarize(b_u = mean(rating - mu - b_m), .groups = 'drop') 
 #  Estimate genre effect b_g
 genre_ef<-train_set%>%
   left_join(movie_ef, by="movieId")%>%
   left_join(user_ef, by="userId")%>%
   group_by(genres)%>%
-  summarize(b_g = mean(rating - mu - b_m- b_u)) 
+  summarize(b_g = mean(rating - mu - b_m- b_u), .groups = 'drop') 
 
 #  Estimate predicted ratings
 predicted_ratings <- test_set %>%
@@ -474,25 +476,25 @@ mu <- mean(train_set$rating)
 # Estimate movie effect b_m
 movie_ef <- train_set %>%
   group_by(movieId) %>%
-  summarize(b_m = mean(rating - mu))
+  summarize(b_m = mean(rating - mu), .groups = 'drop')
 #  Estimate user effect b_u
 user_ef <- train_set %>%
   left_join(movie_ef, by='movieId') %>%
   group_by(userId) %>%
-  summarize(b_u = mean(rating - mu - b_m))
+  summarize(b_u = mean(rating - mu - b_m), .groups = 'drop')
 #  Estimate genre effect b_g
 genre_ef<-train_set%>%
   left_join(movie_ef, by="movieId")%>%
   left_join(user_ef, by="userId")%>%
   group_by(genres)%>%
-  summarize(b_g = mean(rating - mu - b_m- b_u))
+  summarize(b_g = mean(rating - mu - b_m- b_u), .groups = 'drop')
 #  Estimate age effect b_a
 age_ef<-train_set%>%
   left_join(movie_ef, by="movieId")%>%
   left_join(user_ef,  by="userId")%>%
   left_join(genre_ef, by="genres") %>%
   group_by(age_years)%>%
-  summarize(b_a = mean(rating - mu - b_m - b_u - b_g))
+  summarize(b_a = mean(rating - mu - b_m - b_u - b_g), .groups = 'drop')
 # Estimate predicted ratings
 predicted_ratings <- test_set %>%
   left_join(movie_ef, by='movieId') %>%
@@ -513,7 +515,7 @@ rmse_results%>% knitr::kable()
 
 The results showed that by adding additional effect the value of RMSE went down. (M1) Model with movie effects with only one effect resulted in a greatest RMSE among all models.
 
-In this part, results of the models (M4) - (M8) with the regularized effects are presented. First the optimal (with the smallest RMSE) tuning parameter $\lambda$ was chosen. 
+In this part, results of the models (M5) - (M8) with the regularized effects are presented. First the optimal (with the smallest RMSE) tuning parameter $\lambda$ was chosen. 
 
 ```{r echo=FALSE, warning= FALSE}
 
@@ -530,7 +532,7 @@ rmses_m_ef_reg <- sapply(lambda, function(l){
   
   b_m <- train_set %>%
     group_by(movieId) %>%
-    summarize(b_m = sum(rating - mu)/(n()+l), n_m = n())
+    summarize(b_m = sum(rating - mu)/(n()+l), n_m = n(), .groups = 'drop')
   
   predicted_ratings <-test_set %>%
     left_join(b_m, by = "movieId") %>%
@@ -554,7 +556,7 @@ mu <- mean(train_set$rating)
 # Estimate movie effect b_m
 movie_ef_reg <- train_set %>%
   group_by(movieId) %>%
-  summarize(b_m = sum(rating - mu)/(n()+l_1), n_m = n())
+  summarize(b_m = sum(rating - mu)/(n()+l_1), n_m = n(), .groups = 'drop')
 # Estimate predicted ratings
 predicted_ratings <- test_set %>%
   left_join(movie_ef_reg, by = "movieId") %>%
@@ -584,12 +586,12 @@ rmses_mu_ef_reg <- sapply(lambda, function(l){
   
   b_m <- train_set %>%
     group_by(movieId) %>%
-    summarize(b_m = sum(rating - mu)/(n()+l), n_m = n())
+    summarize(b_m = sum(rating - mu)/(n()+l), n_m = n(), .groups = 'drop')
   
   b_u <- train_set %>%
     left_join(b_m, by="movieId") %>%
     group_by(userId) %>%
-    summarize(b_u = sum(rating - b_m - mu)/(n()+l), n_u = n())
+    summarize(b_u = sum(rating - b_m - mu)/(n()+l), n_u = n(), .groups = 'drop')
   
   predicted_ratings <-test_set %>%
     left_join(b_m, by = "movieId") %>%
@@ -615,12 +617,12 @@ mu <- mean(train_set$rating)
 # Estimate movie effect b_m
 movie_ef_reg <- train_set %>%
   group_by(movieId) %>%
-  summarize(b_m = sum(rating - mu)/(n()+l_2), n_m= n())
+  summarize(b_m = sum(rating - mu)/(n()+l_2), n_m= n(), .groups = 'drop')
 # Estimate user effect b_u 
 user_ef_reg <- train_set %>%
   left_join(movie_ef_reg, by='movieId') %>% 
   group_by(userId) %>%
-  summarize(b_u = sum(rating - b_m - mu)/(n() +l_2), n_u = n())
+  summarize(b_u = sum(rating - b_m - mu)/(n() +l_2), n_u = n(), .groups = 'drop')
 #  Estimate predicted ratings 
 predicted_ratings <- test_set %>%
   left_join(movie_ef_reg, by = "movieId") %>%
@@ -653,18 +655,18 @@ rmses_mug_ef_reg <- sapply(lambda, function(l){
   
   b_m <- train_set %>%
     group_by(movieId) %>%
-    summarize(b_m = sum(rating - mu)/(n()+l), n_m = n())
+    summarize(b_m = sum(rating - mu)/(n()+l), n_m = n(), .groups = 'drop')
   
   b_u <- train_set %>%
     left_join(b_m, by="movieId") %>%
     group_by(userId) %>%
-    summarize(b_u = sum(rating - b_m - mu)/(n()+l), n_u = n())
+    summarize(b_u = sum(rating - b_m - mu)/(n()+l), n_u = n(), .groups = 'drop')
   
   b_g <- train_set %>%
     left_join(b_m, by="movieId") %>%
     left_join(b_u, by="userId") %>%
     group_by(genres)%>%
-    summarize(b_g = sum(rating - b_m - b_u - mu)/(n()+l), n_g = n())
+    summarize(b_g = sum(rating - b_m - b_u - mu)/(n()+l), n_g = n(), .groups = 'drop')
   
   predicted_ratings <-test_set %>%
     left_join(b_m, by = "movieId") %>%
@@ -693,18 +695,18 @@ mu <- mean(train_set$rating)
 # Estimate movie effect b_m
 movie_ef_reg <- train_set %>%
   group_by(movieId) %>%
-  summarize(b_m = sum(rating - mu)/(n()+l_3), n_m= n())
+  summarize(b_m = sum(rating - mu)/(n()+l_3), n_m= n(), .groups = 'drop')
 # Estimate user effect b_u
 user_ef_reg <- train_set %>%
   left_join(movie_ef_reg, by='movieId') %>% 
   group_by(userId) %>%
-  summarize(b_u = sum(rating - b_m - mu)/(n() +l_3), n_u = n())
+  summarize(b_u = sum(rating - b_m - mu)/(n() +l_3), n_u = n(), .groups = 'drop')
 #  Estimate genre effect b_g
 genre_ef_reg <- train_set %>%
   left_join(movie_ef_reg, by="movieId") %>%
   left_join(user_ef_reg, by="userId") %>%
   group_by(genres)%>%
-  summarize(b_g = sum(rating - b_m - b_u - mu)/(n()+l_3), n_g = n())
+  summarize(b_g = sum(rating - b_m - b_u - mu)/(n()+l_3), n_g = n(), .groups = 'drop')
 #  Estimate predicted ratings 
 predicted_ratings <- test_set %>%
   left_join(movie_ef_reg, by = "movieId") %>%
@@ -738,25 +740,25 @@ rmses_muga_ef_reg <- sapply(lambda, function(l){
   
   b_m <- train_set %>%
     group_by(movieId) %>%
-    summarize(b_m = sum(rating - mu)/(n()+l), n_m = n())
+    summarize(b_m = sum(rating - mu)/(n()+l), n_m = n(), .groups = 'drop')
   
   b_u <- train_set %>%
     left_join(b_m, by="movieId") %>%
     group_by(userId) %>%
-    summarize(b_u = sum(rating - b_m - mu)/(n()+l), n_u = n())
+    summarize(b_u = sum(rating - b_m - mu)/(n()+l), n_u = n(), .groups = 'drop')
   
   b_g <- train_set %>%
     left_join(b_m, by="movieId") %>%
     left_join(b_u, by="userId") %>%
     group_by(genres)%>%
-    summarize(b_g = sum(rating - b_m - b_u - mu)/(n()+l), n_g = n())
+    summarize(b_g = sum(rating - b_m - b_u - mu)/(n()+l), n_g = n(), .groups = 'drop')
   
   b_a <- train_set %>%
     left_join(b_m, by="movieId") %>%
     left_join(b_u, by="userId") %>%
     left_join(b_g, by="genres") %>%
     group_by(age_years)%>%
-    summarize(b_a = sum(rating - b_g - b_m - b_u - mu)/(n()+l), n_a = n())
+    summarize(b_a = sum(rating - b_g - b_m - b_u - mu)/(n()+l), n_a = n(), .groups = 'drop')
   
   predicted_ratings <-test_set %>%
     left_join(b_m, by = "movieId") %>%
@@ -784,25 +786,25 @@ mu <- mean(train_set$rating)
 # Estimate movie effect b_m
 movie_ef_reg <- train_set %>%
   group_by(movieId) %>%
-  summarize(b_m = sum(rating - mu)/(n()+l_4), n_m= n())
+  summarize(b_m = sum(rating - mu)/(n()+l_4), n_m= n(), .groups = 'drop')
 # Estimate user effect b_u
 user_ef_reg <- train_set %>%
   left_join(movie_ef_reg, by='movieId') %>% 
   group_by(userId) %>%
-  summarize(b_u = sum(rating - b_m - mu)/(n() +l_4), n_u = n())
+  summarize(b_u = sum(rating - b_m - mu)/(n() +l_4), n_u = n(), .groups = 'drop')
 #  Estimate genre effect b_g
 genre_ef_reg <- train_set %>%
   left_join(movie_ef_reg, by = "movieId") %>%
   left_join(user_ef_reg,  by = "userId") %>%
   group_by(genres)%>%
-  summarize(b_g = sum(rating - b_m - b_u - mu)/(n()+l_4), n_g = n())
+  summarize(b_g = sum(rating - b_m - b_u - mu)/(n()+l_4), n_g = n(), .groups = 'drop')
 # Estimate age effect b_a
 age_ef_reg <- train_set %>%
   left_join(movie_ef_reg, by = "movieId") %>%
   left_join(user_ef_reg,  by = "userId") %>%
   left_join(genre_ef_reg, by = "genres")%>%
   group_by(age_years)%>%
-  summarize(b_a = sum(rating - b_g - b_m - b_u - mu)/(n()+l_4), n_a = n())
+  summarize(b_a = sum(rating - b_g - b_m - b_u - mu)/(n()+l_4), n_a = n(), .groups = 'drop')
 #  Estimate predicted ratings 
 predicted_ratings <- test_set %>%
   left_join(movie_ef_reg, by = "movieId") %>%
@@ -851,25 +853,25 @@ mu <- mean(edx$rating)
 # Estimate movie effect b_m
 movie_ef_reg <- edx %>%
   group_by(movieId) %>%
-  summarize(b_m = sum(rating - mu)/(n()+l_4), n_m= n())
+  summarize(b_m = sum(rating - mu)/(n()+l_4), n_m= n(), .groups = 'drop')
 # Estimate user effect b_u
 user_ef_reg <- edx %>%
   left_join(movie_ef_reg, by='movieId') %>% 
   group_by(userId) %>%
-  summarize(b_u = sum(rating - b_m - mu)/(n() +l_4), n_u = n())
+  summarize(b_u = sum(rating - b_m - mu)/(n() +l_4), n_u = n(), .groups = 'drop')
 #  Estimate genre effect b_g
 genre_ef_reg <- edx %>%
   left_join(movie_ef_reg, by = "movieId") %>%
   left_join(user_ef_reg,  by = "userId") %>%
   group_by(genres)%>%
-  summarize(b_g = sum(rating - b_m - b_u - mu)/(n()+l_4), n_g = n())
+  summarize(b_g = sum(rating - b_m - b_u - mu)/(n()+l_4), n_g = n(), .groups = 'drop')
 # Estimate age effect b_a
 age_ef_reg <- edx %>%
   left_join(movie_ef_reg, by = "movieId") %>%
   left_join(user_ef_reg,  by = "userId") %>%
   left_join(genre_ef_reg, by = "genres")%>%
   group_by(age_years)%>%
-  summarize(b_a = sum(rating - b_g - b_m - b_u - mu)/(n()+l_4), n_a = n())
+  summarize(b_a = sum(rating - b_g - b_m - b_u - mu)/(n()+l_4), n_a = n(), .groups = 'drop')
 #  Estimate predicted ratings 
 predicted_ratings <- validation %>%
   left_join(movie_ef_reg, by = "movieId") %>%
